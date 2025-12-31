@@ -2,6 +2,7 @@ package com.tppartdeux.edoctorat.configuration;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -19,6 +20,7 @@ import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -38,7 +40,16 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth.requestMatchers("/api/**").permitAll()
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/**").permitAll() // Authentication endpoints
+                        .requestMatchers("/api/token/**").permitAll() // Token endpoints
+                        .requestMatchers("/api/register/**").permitAll() // Registration endpoints
+                        .requestMatchers("/api/confirm-email/**").permitAll() // Email confirmation
+                        .requestMatchers("/api/request-password-reset/**").permitAll() // Password reset
+                        .requestMatchers("/api/verify-token/**").permitAll() // Token verification
+                        .requestMatchers("/api/perform-password-reset/**").permitAll() // Password reset execution
+                        .requestMatchers("/api/get-base-config/**").permitAll() // Configuration endpoints
+                        .requestMatchers("/api/get-published-subjects/**").permitAll() // Published subjects
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
