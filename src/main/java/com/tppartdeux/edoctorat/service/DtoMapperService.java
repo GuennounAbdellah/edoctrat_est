@@ -62,7 +62,7 @@ public class DtoMapperService {
         return FormationDoctoraleResponse.builder()
                 .id(fd.getId())
                 .ced(fd.getCed() != null ? fd.getCed().getId() : null)
-                .etablissement(fd.getEtablissementId() != null ? Long.parseLong(fd.getEtablissementId()) : null)
+                .etablissement(fd.getEtablissementId())
                 .axeDeRecherche(fd.getAxeDeRecherche())
                 .pathImage(fd.getPathImage())
                 .titre(fd.getTitre())

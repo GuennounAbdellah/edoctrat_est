@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 public class FormationDoctoraleResponse {
     private Long id;
     private Long ced;
-    private Long etablissement;
+    private String etablissement;
     private String axeDeRecherche;
     private String pathImage;
     private String titre;
