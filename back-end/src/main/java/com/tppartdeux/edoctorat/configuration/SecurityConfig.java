@@ -41,8 +41,10 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/**").permitAll()   
-                                    .anyRequest().authenticated())
+                        .requestMatchers("/api/token/", "/api/token/refresh/", "/api/verify-token/", "/api/verify-email/", "/api/resend-verification/", "/api/register/candidat/", "/api/request-password-reset/", "/api/perform-password-reset/").permitAll()
+                        .requestMatchers("/api/login_*").permitAll()
+                        .requestMatchers("/api/exempleUsers", "/api/createDirecteurCed").permitAll()
+                        .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

@@ -21,6 +21,7 @@ public class DirecteurCedAngularController {
     private final SujetService sujetService;
     private final CommissionService commissionService;
     private final ExaminerService examinerService;
+    private final InscriptionService inscriptionService;
     private final DtoMapperService dtoMapper;
 
     // GET /api/get-ced-sujets/ - Get sujets for CED
@@ -67,6 +68,23 @@ public class DirecteurCedAngularController {
         return ResponseEntity.ok(ResultDTO.of(responses));
     }
 
+    // GET /api/get-ced-inscriptions/ - Get all inscriptions for CED
+    @GetMapping("/get-ced-inscriptions/")
+    public ResponseEntity<ResultDTO<InscriptionResponse>> getAllInscriptions(
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) Integer offset) {
+        List<Inscription> inscriptions = inscriptionService.findAll();
+        
+        int start = offset != null ? offset : 0;
+        int end = limit != null ? Math.min(start + limit, inscriptions.size()) : inscriptions.size();
+        
+        List<InscriptionResponse> responses = inscriptions.subList(start, end).stream()
+                .map(dtoMapper::toInscriptionResponse)
+                .collect(Collectors.toList());
+        
+        return ResponseEntity.ok(ResultDTO.of(responses, inscriptions.size(), null, null));
+    }
+
     // GET /api/get-ced-resultats/ - Get resultats for CED
     @GetMapping("/get-ced-resultats/")
     public ResponseEntity<ResultDTO<ExaminerResponse>> getCedResultats(
@@ -83,5 +101,21 @@ public class DirecteurCedAngularController {
                 .collect(Collectors.toList());
         
         return ResponseEntity.ok(ResultDTO.of(responses, examiners.size(), null, null));
+    }
+    
+    // GET /api/download-registration-report - Download registration report
+    @GetMapping("/download-registration-report")
+    public ResponseEntity<byte[]> downloadRegistrationReport() {
+        try {
+            // This would typically generate an Excel/PDF report of registrations
+            // For now, returning a placeholder response
+            byte[] reportData = "Sample Report Content".getBytes();
+            return ResponseEntity.ok()
+                    .header("Content-Disposition", "attachment; filename=rapport-inscriptions.xlsx")
+                    .contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM)
+                    .body(reportData);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
     }
 }

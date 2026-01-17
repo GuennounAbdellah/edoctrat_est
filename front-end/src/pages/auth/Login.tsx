@@ -50,8 +50,17 @@ const Login = () => {
           localStorage.setItem('refreshToken', data.refresh);
         }
         toast.success('Connexion réussie avec Google !');
-        // Navigate to candidate dashboard
-        navigate('/candidat');
+        
+        // Determine user role and redirect accordingly
+        // For demo purposes, we'll check the email to determine role
+        // In a real implementation, this would be determined from the JWT token
+        const email = data.email?.toLowerCase() || '';
+        
+        if (email.includes('ced') || email.includes('directeurced')) {
+          navigate('/ced-dashboard');
+        } else {
+          navigate('/candidat'); // default redirect
+        }
       } else {
         toast.error('Erreur lors de la connexion Google');
       }
@@ -95,15 +104,26 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      // Using unified login endpoint
-      const endpoint = UNIFIED_LOGIN_ENDPOINT;
+      // Determine the appropriate endpoint based on email
+      const emailLower = formData.email.toLowerCase();
+      let endpoint: string;
       let requestBody: any;
 
-      // For unified login: email and password
-      requestBody = {
-        email: formData.email,
-        password: formData.password,
-      };
+      if (emailLower.includes('ced') || emailLower.includes('directeurced')) {
+        // Use Directeur CED specific endpoint
+        endpoint = '/api/login_directeur_ced';
+        requestBody = {
+          email: formData.email,
+          password: formData.password,
+        };
+      } else {
+        // Use unified login endpoint for other users
+        endpoint = UNIFIED_LOGIN_ENDPOINT;
+        requestBody = {
+          email: formData.email,
+          password: formData.password,
+        };
+      }
 
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST',
@@ -125,8 +145,17 @@ const Login = () => {
         }
         
         toast.success('Connexion réussie !');
-        // Navigate to candidate dashboard
-        navigate('/candidat');
+        
+        // Determine user role and redirect accordingly
+        // For demo purposes, we'll check the email to determine role
+        // In a real implementation, this would be determined from the JWT token
+        const email = formData.email.toLowerCase();
+        
+        if (email.includes('ced') || email.includes('directeurced')) {
+          navigate('/ced-dashboard');
+        } else {
+          navigate('/candidat'); // default redirect
+        }
       } else {
         const errorData = await response.json().catch(() => ({}));
         if (response.status === 403 && errorData.error === 'EMAIL_NOT_VERIFIED') {
