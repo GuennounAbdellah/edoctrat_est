@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, User, Mail, Loader2, CheckCircle } from 'lucide-react';
+import { ArrowLeft, User, Mail, Loader2, CheckCircle, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Layout from '@/components/layout/Layout';
 import { toast } from 'sonner';
+import { API_BASE_URL, REGISTER_CANDIDAT_ENDPOINT } from '@/config/auth';
 
 const PreInscription = () => {
   const navigate = useNavigate();
@@ -16,18 +17,40 @@ const PreInscription = () => {
     nom: '',
     prenom: '',
     email: '',
+    password: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const response = await fetch(`${API_BASE_URL}${REGISTER_CANDIDAT_ENDPOINT}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          nom: formData.nom,
+          prenom: formData.prenom,
+        }),
+      });
+
+      if (response.ok) {
+        setIsSuccess(true);
+        toast.success('Inscription réussie ! Vérifiez votre email pour activer votre compte.');
+      } else {
+        const data = await response.json();
+        toast.error(data.error || 'Erreur lors de l\'inscription');
+      }
+    } catch (error) {
+      toast.error('Erreur de connexion au serveur');
+      console.error('Erreur:', error);
+    } finally {
       setIsLoading(false);
-      setIsSuccess(true);
-      toast.success('Pré-inscription réussie ! Vérifiez votre email.');
-    }, 2000);
+    }
   };
 
   if (isSuccess) {
@@ -53,7 +76,7 @@ const PreInscription = () => {
                 inscription.
               </p>
               <div className="space-y-3">
-                <Link to="/connexion/candidat">
+                <Link to="/login">
                   <Button className="w-full" size="lg">
                     Aller à la page de connexion
                   </Button>
@@ -142,6 +165,23 @@ const PreInscription = () => {
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="password">Mot de passe</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Votre mot de passe"
+                    className="pl-11"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    required
+                    minLength={3}
+                  />
+                </div>
+              </div>
+
               <div className="p-4 rounded-xl bg-muted text-sm text-muted-foreground">
                 <p>
                   En vous inscrivant, vous acceptez nos{' '}
@@ -171,7 +211,7 @@ const PreInscription = () => {
             <div className="mt-8 pt-6 border-t border-border/50 text-center">
               <p className="text-muted-foreground text-sm">
                 Déjà inscrit ?{' '}
-                <Link to="/connexion/candidat" className="text-primary font-semibold hover:underline">
+                <Link to="/login" className="text-primary font-semibold hover:underline">
                   Se connecter
                 </Link>
               </p>

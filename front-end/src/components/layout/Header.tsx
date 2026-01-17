@@ -87,7 +87,7 @@ const Header = () => {
 
           {/* Actions */}
           <div className="flex items-center gap-3">
-            <Link to="/connexion" className="hidden sm:block">
+            <Link to="/login" className="hidden sm:block">
               <Button variant="outline" size="default">
                 <LogIn className="w-4 h-4" />
                 Se connecter
@@ -151,7 +151,7 @@ const Header = () => {
                   </div>
                 ))}
                 <div className="pt-4 px-4 sm:hidden">
-                  <Link to="/connexion" onClick={() => setMobileMenuOpen(false)}>
+                  <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
                     <Button variant="outline" className="w-full mb-2">
                       <LogIn className="w-4 h-4" />
                       Se connecter
