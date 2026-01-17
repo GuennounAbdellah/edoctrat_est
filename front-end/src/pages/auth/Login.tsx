@@ -52,14 +52,23 @@ const Login = () => {
         toast.success('Connexion réussie avec Google !');
         
         // Determine user role and redirect accordingly
-        // For demo purposes, we'll check the email to determine role
-        // In a real implementation, this would be determined from the JWT token
-        const email = data.email?.toLowerCase() || '';
+        // Check the user's groups/roles from the backend response to determine the role
+        const userRole = data.role || data.userRole || (data.groups && data.groups.length > 0 ? data.groups[0] : null);
         
-        if (email.includes('ced') || email.includes('directeurced')) {
+        // Redirect based on user role from backend
+        if (userRole && userRole.toLowerCase().includes('directeur_ced')) {
           navigate('/ced-dashboard');
+        } else if (userRole && userRole.toLowerCase().includes('directeur_labo')) {
+          navigate('/labo-dashboard');
+        } else if (userRole && userRole.toLowerCase().includes('scolarite')) {
+          navigate('/scolarite-dashboard');
+        } else if (userRole && userRole.toLowerCase().includes('professeur')) {
+          navigate('/professeur-dashboard');
+        } else if (userRole && userRole.toLowerCase().includes('directeur_pole')) {
+          navigate('/pole-dashboard');
         } else {
-          navigate('/candidat'); // default redirect
+          // Default to candidat for regular users
+          navigate('/candidat');
         }
       } else {
         toast.error('Erreur lors de la connexion Google');
@@ -133,16 +142,23 @@ const Login = () => {
         toast.success('Connexion réussie !');
         
         // Determine user role and redirect accordingly
-        // Check the user's groups from the JWT token to determine the role
-        const email = formData.email.toLowerCase();
+        // Check the user's groups/roles from the backend response to determine the role
+        const userRole = data.role || data.userRole || (data.groups && data.groups.length > 0 ? data.groups[0] : null);
         
-        // Check if the user has directeur_ced role by examining email
-        if (email.includes('ced') || email.includes('directeurced')) {
+        // Redirect based on user role from backend
+        if (userRole && userRole.toLowerCase().includes('directeur_ced')) {
           navigate('/ced-dashboard');
+        } else if (userRole && userRole.toLowerCase().includes('directeur_labo')) {
+          navigate('/labo-dashboard');
+        } else if (userRole && userRole.toLowerCase().includes('scolarite')) {
+          navigate('/scolarite-dashboard');
+        } else if (userRole && userRole.toLowerCase().includes('professeurs')) {
+          navigate('/professeur-dashboard');
+        } else if (userRole && userRole.toLowerCase().includes('directeur_pole')) {
+          navigate('/pole-dashboard');
         } else {
-          // For other roles, we'd typically check the JWT token's roles
-          // For now, default to candidat
-          navigate('/candidat'); // default redirect
+          // Default to candidat for regular users
+          navigate('/candidat');
         }
       } else {
         const errorData = await response.json().catch(() => ({}));

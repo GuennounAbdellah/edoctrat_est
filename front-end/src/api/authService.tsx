@@ -176,3 +176,86 @@ export const directeurCedApi = {
     return response.blob();
   }
 };
+
+// API Service for Authentication
+export const authApi = {
+  login: async (credentials) => {
+    const response = await fetch(`${API_BASE_URL}/api/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(credentials),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Login failed');
+    }
+
+    const data = await response.json();
+    
+    // Store tokens in localStorage
+    if (data.access) {
+      localStorage.setItem('accessToken', data.access);
+    }
+    if (data.refresh) {
+      localStorage.setItem('refreshToken', data.refresh);
+    }
+    
+    return data;
+  },
+  
+  register: async (userData) => {
+    const response = await fetch(`${API_BASE_URL}/api/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(userData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Registration failed');
+    }
+
+    return response.json();
+  },
+  
+  logout: async () => {
+    // Clear tokens from localStorage
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    
+    // Optionally, call backend logout endpoint
+    try {
+      await fetch(`${API_BASE_URL}/api/logout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        }
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+    
+    // Redirect to login page
+    window.location.href = '/login';
+  },
+  
+  getCurrentUser: async () => {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/api/user/me`, {
+      method: 'GET',
+      headers: headers
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return response.json();
+  }
+};

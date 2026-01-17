@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/table';
 import Layout from '@/components/layout/Layout';
 import { toast } from 'sonner';
-import { directeurCedApi } from '@/api/api';
+import { directeurCedApi } from '@/api/authService';
 
 // Define types based on the backend models
 interface Candidat {
