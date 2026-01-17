@@ -1,6 +1,17 @@
 package com.tppartdeux.edoctorat.controller.auth;
 
-import com.tppartdeux.edoctorat.dto.auth.*;
+import com.tppartdeux.edoctorat.dto.auth.AuthProfResponse;
+import com.tppartdeux.edoctorat.dto.auth.ConfirmEmailRequest;
+import com.tppartdeux.edoctorat.dto.auth.LoginRequest;
+import com.tppartdeux.edoctorat.dto.auth.LoginResponse;
+import com.tppartdeux.edoctorat.dto.auth.PasswordResetRequest;
+import com.tppartdeux.edoctorat.dto.auth.PerformPasswordResetRequest;
+import com.tppartdeux.edoctorat.dto.auth.PreRegistrationResponse;
+import com.tppartdeux.edoctorat.dto.auth.RefreshTokenRequest;
+import com.tppartdeux.edoctorat.dto.auth.TokenRequest;
+import com.tppartdeux.edoctorat.dto.auth.TokenResponse;
+import com.tppartdeux.edoctorat.dto.auth.UserInfoResponse;
+import com.tppartdeux.edoctorat.dto.auth.VerifyTokenRequest;
 import com.tppartdeux.edoctorat.service.auth.UserService;
 import lombok.RequiredArgsConstructor;
 
@@ -8,8 +19,6 @@ import java.util.Map;
 import java.util.Optional;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.PostMapping;
 
 
 
@@ -17,6 +26,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class AuthenticationController {
 
     private final UserService userService;
@@ -32,33 +42,33 @@ public class AuthenticationController {
         return ResponseEntity.ok("Directeur CED user created successfully.");
     }
 
-    @PostMapping("/createDirecteurPole")
-    public ResponseEntity<String> createDirecteurPoleUser(@RequestBody LoginRequest request) {
-        userService.createDirecteurPoleUser(request.getEmail(), request.getPassword());
-        return ResponseEntity.ok("Directeur Pole user created successfully.");
-    }
-
-    @PostMapping("/createDirecteurLabo")
-    public ResponseEntity<String> createDirecteurLaboUser(@RequestBody LoginRequest request) {
-        userService.createDirecteurLaboUser(request.getEmail(), request.getPassword());
-        return ResponseEntity.ok("Directeur Labo user created successfully.");
-    }
-
     // POST /api/token/ - Candidat login (JWT token generation)
     @PostMapping("/token/")
-    public ResponseEntity<TokenResponse> loginCandidat(@RequestBody TokenRequest tokenRequest) {
+    public ResponseEntity<?> loginCandidat(@RequestBody TokenRequest tokenRequest) {
         System.out.println("!!!!!!!Received login request for email: " + tokenRequest.getEmail());
-        System.err.println("!!!!!!!Received login request for password: " + tokenRequest.getPassword());
         try {
-            Optional<TokenResponse> token = userService.loginCandidat(tokenRequest.getEmail(), tokenRequest.getPassword());
-            return token.map(ResponseEntity::ok)
-                    .orElse(ResponseEntity.status(401).build());
+            Optional<TokenResponse> token = userService.loginCandidat(
+                tokenRequest.getEmail(), 
+                tokenRequest.getPassword()
+            );
+            return token.map(t -> ResponseEntity.ok((Object) t))
+                    .orElse(ResponseEntity.status(401).body(
+                        Map.of("error", "Invalid credentials")
+                    ));
         } catch (RuntimeException e) {
-            return ResponseEntity.status(401).build();
+            if ("EMAIL_NOT_VERIFIED".equals(e.getMessage())) {
+                return ResponseEntity.status(403).body(Map.of(
+                    "error", "EMAIL_NOT_VERIFIED",
+                    "message", "Please verify your email before logging in"
+                ));
+            }
+            return ResponseEntity.status(401).body(
+                Map.of("error", "Invalid credentials")
+            );
         } 
     }
 
-    // POST /api/login_scolarite - Scolarite login
+        // POST /api/login_scolarite - Scolarite login
     @PostMapping("/login_scolarite")
     public ResponseEntity<LoginResponse> loginScolarite(@RequestBody LoginRequest loginRequest) {
         try {
@@ -115,7 +125,6 @@ public class AuthenticationController {
         }
     }
     
-
     // POST /api/verify-is-prof/ - Professor login via Google token
     @PostMapping("/verify-is-prof/")
     public ResponseEntity<AuthProfResponse> verifyIsProfessor(@RequestBody VerifyTokenRequest request) {
@@ -153,17 +162,6 @@ public class AuthenticationController {
         }
     }
 
-    // POST /api/confirm-email/ - Send confirmation email for pre-registration
-    @PostMapping("/confirm-email/")
-    public ResponseEntity<?> confirmEmail(@RequestBody ConfirmEmailRequest request) {
-        try {
-            userService.sendConfirmationEmail(request.getEmail(), request.getNom(), request.getPrenom(), request.getOrigin());
-            return ResponseEntity.ok().build();
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
-    }
-
     // POST /api/verify-token/ - Verify pre-registration token
     @PostMapping("/verify-token/")
     public ResponseEntity<PreRegistrationResponse> verifyToken(@RequestBody VerifyTokenRequest request) {
@@ -173,6 +171,52 @@ public class AuthenticationController {
                     .orElse(ResponseEntity.status(400).build());
         } catch (RuntimeException e) {
             return ResponseEntity.status(400).build();
+        }
+    }
+
+    @PostMapping("/verify-email/")
+    public ResponseEntity<?> verifyEmail(@RequestBody Map<String, String> request) {
+        try {
+            String token = request.get("token");
+            if (token == null || token.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Token is required"));
+            }
+            
+            userService.verifyEmail(token);
+            return ResponseEntity.ok(Map.of("message", "Email verified successfully"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // POST /api/resend-verification/ - Resend verification email
+    @PostMapping("/resend-verification/")
+    public ResponseEntity<?> resendVerificationEmail(@RequestBody Map<String, String> request) {
+        try {
+            String email = request.get("email");
+            if (email == null || email.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Email is required"));
+            }
+            
+            userService.resendVerificationEmail(email);
+            return ResponseEntity.ok(Map.of("message", "Verification email sent"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // GET /api/check-verification-status/{email} - Check if email is verified
+    @GetMapping("/check-verification-status/{email}")
+    public ResponseEntity<?> checkVerificationStatus(@PathVariable String email) {
+        try {
+            Optional<UserInfoResponse> userInfo = userService.getUserInfoFromToken("", "candidat");
+            
+            return ResponseEntity.ok(Map.of(
+                "email", email,
+                "isVerified", true
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 
