@@ -1,5 +1,5 @@
 interface Result<Type> {
-    [x: string]: any;
+    [x: string]: unknown;
     count: number,
     next: string | null, 
     previous: string | null, 
