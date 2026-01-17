@@ -13,7 +13,7 @@ import ResetPassword from "./pages/auth/ResetPassword";
 import Laboratoires from "./pages/home/Laboratoires";
 import Formations from "./pages/home/Formations";
 import Calendrier from "./pages/home/Calendrier";
-import DirecteurCed from "./pages/home/DirecteurCed";
+import DirecteurCed from "./pages/directeur-ced/DirecteurCed";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();

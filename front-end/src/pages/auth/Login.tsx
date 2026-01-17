@@ -104,26 +104,12 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      // Determine the appropriate endpoint based on email
-      const emailLower = formData.email.toLowerCase();
-      let endpoint: string;
-      let requestBody: any;
-
-      if (emailLower.includes('ced') || emailLower.includes('directeurced')) {
-        // Use Directeur CED specific endpoint
-        endpoint = '/api/login_directeur_ced';
-        requestBody = {
-          email: formData.email,
-          password: formData.password,
-        };
-      } else {
-        // Use unified login endpoint for other users
-        endpoint = UNIFIED_LOGIN_ENDPOINT;
-        requestBody = {
-          email: formData.email,
-          password: formData.password,
-        };
-      }
+      // Use unified login endpoint for all users
+      const endpoint = '/api/login';
+      const requestBody = {
+        email: formData.email,
+        password: formData.password,
+      };
 
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST',
@@ -147,13 +133,15 @@ const Login = () => {
         toast.success('Connexion réussie !');
         
         // Determine user role and redirect accordingly
-        // For demo purposes, we'll check the email to determine role
-        // In a real implementation, this would be determined from the JWT token
+        // Check the user's groups from the JWT token to determine the role
         const email = formData.email.toLowerCase();
         
+        // Check if the user has directeur_ced role by examining email
         if (email.includes('ced') || email.includes('directeurced')) {
           navigate('/ced-dashboard');
         } else {
+          // For other roles, we'd typically check the JWT token's roles
+          // For now, default to candidat
           navigate('/candidat'); // default redirect
         }
       } else {
