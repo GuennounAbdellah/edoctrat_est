@@ -10,19 +10,19 @@ import lombok.Data;
 @AllArgsConstructor
 public class LoginResponse {
 
-    // 🔐 Tokens
+    // Tokens
     private String access;
     private String refresh;
 
-    // 👤 User info
+    // User info
     private String nom;
     private String prenom;
     private String email;
     private String pathPhoto;
 
-        // 🧑‍🤝‍🧑 Roles / groups
+        // Roles / groups
         private List<String> groups;
 
-        // 🔧 Optional metadata
+        // Optional metadata
         private Map<String, Object> misc;
 }

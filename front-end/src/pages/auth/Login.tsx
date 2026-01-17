@@ -152,7 +152,7 @@ const Login = () => {
           className="w-full max-w-md"
         >
           <Link
-            to="/connexion"
+            to="/login"
             className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors mb-8"
           >
             <ArrowLeft className="w-4 h-4" />

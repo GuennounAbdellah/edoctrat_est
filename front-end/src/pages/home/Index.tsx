@@ -40,12 +40,12 @@ const features = [
 ];
 
 const roles = [
-  { label: 'Candidat', href: '/connexion/candidat', description: 'Accédez à votre espace candidat' },
-  { label: 'Professeur', href: '/connexion/professeur', description: 'Gérez vos doctorants et sujets' },
-  { label: 'Scolarité', href: '/connexion/scolarite', description: 'Administration des inscriptions' },
-  { label: 'Directeur CED', href: '/connexion/ced', description: "Direction du centre d'études" },
-  { label: 'Directeur Labo', href: '/connexion/labo', description: 'Gestion du laboratoire' },
-  { label: 'Directeur Pôle', href: '/connexion/pole', description: 'Coordination du pôle doctoral' },
+  { label: 'Candidat', href: '/login/candidat', description: 'Accédez à votre espace candidat' },
+  { label: 'Professeur', href: '/login/professeur', description: 'Gérez vos doctorants et sujets' },
+  { label: 'Scolarité', href: '/login/scolarite', description: 'Administration des inscriptions' },
+  { label: 'Directeur CED', href: '/login/ced', description: "Direction du centre d'études" },
+  { label: 'Directeur Labo', href: '/login/labo', description: 'Gestion du laboratoire' },
+  { label: 'Directeur Pôle', href: '/login/pole', description: 'Coordination du pôle doctoral' },
 ];
 
 const Index = () => {
@@ -109,7 +109,7 @@ const Index = () => {
                   <ArrowRight className="w-5 h-5" />
                 </Button>
               </Link>
-              <Link to="/connexion">
+              <Link to="/login">
                 <Button variant="heroOutline" size="xl">
                   Se connecter
                 </Button>
@@ -128,7 +128,7 @@ const Index = () => {
           <div className="container mx-auto px-4 lg:px-8">
             <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-primary-foreground/10">
               {stats.map((stat, index) => (
-                <div key={stat.label} className="py-1 lg:py-2 px-4 lg:px-8 text-center">
+                <div key={stat.label} className="py-3 lg:py-3 px-4 lg:px-8 text-center">
                   <stat.icon className="w-6 h-6 text-secondary mx-auto mb-2" />
                   <div className="text-2xl lg:text-3xl font-bold text-primary-foreground mb-1">
                     {stat.value}
