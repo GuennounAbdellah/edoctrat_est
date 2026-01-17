@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
-public class DirecteurPoleAngularController {
+public class DirecteurPoleController {
 
     private final SujetService sujetService;
     private final CommissionService commissionService;
