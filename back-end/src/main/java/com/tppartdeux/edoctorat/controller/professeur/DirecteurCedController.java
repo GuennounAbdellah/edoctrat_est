@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
-public class DirecteurCedAngularController {
+public class DirecteurCedController {
 
     private final SujetService sujetService;
     private final CommissionService commissionService;

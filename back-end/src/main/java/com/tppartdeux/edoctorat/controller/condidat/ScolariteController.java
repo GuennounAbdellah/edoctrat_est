@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
-public class ScolariteAngularController {
+public class ScolariteController {
 
     private final CandidatService candidatService;
     private final DtoMapperService dtoMapper;

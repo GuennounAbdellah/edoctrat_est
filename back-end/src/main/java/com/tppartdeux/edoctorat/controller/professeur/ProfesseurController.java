@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api")
 @RequiredArgsConstructor
 @CrossOrigin(origins = {"http://localhost:4200", "http://localhost:3000", "http://127.0.0.1:4200"})
-public class ProfesseurAngularController {
+public class ProfesseurController {
 
     private final ProfesseurService professeurService;
     private final SujetService sujetService;
