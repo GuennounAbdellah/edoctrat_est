@@ -13,9 +13,15 @@ import ResetPassword from "./pages/auth/ResetPassword";
 import Laboratoires from "./pages/home/Laboratoires";
 import Formations from "./pages/home/Formations";
 import Calendrier from "./pages/home/Calendrier";
+import DirecteurCed from "./pages/directeur-ced/DirecteurCed";
 import DirecteurLabo from "./pages/directeur-labo/DirecteurLabo";
+
+import Scolarite from "./pages/scolarite/Scolarite";
+import Professeur from "./pages/professeur/Prefesseur";
+import Candidat from "./pages/candidat/Candidat";
 import DirecteurPole from "./pages/directeur-pole/DirecteurPole";
 import NotFound from "./pages/NotFound";
+
 
 const queryClient = new QueryClient();
 
@@ -28,6 +34,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/login/ced" element={<Login />} />
           <Route path="/candidat/pre-inscription" element={<PreInscription />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/resend-verification" element={<ResendVerification />} />
@@ -36,8 +43,12 @@ const App = () => (
           <Route path="/laboratoires" element={<Laboratoires />} />
           <Route path="/formations" element={<Formations />} />
           <Route path="/calendrier" element={<Calendrier />} />
-          <Route path="/directeur-labo" element={<DirecteurLabo />} />
-          <Route path="/directeur-pole" element={<DirecteurPole />} />
+          <Route path="/ced-dashboard" element={<DirecteurCed />} />
+          <Route path="/labo-dashboard" element={<DirecteurLabo />} />
+          <Route path="/scolarite-dashboard" element={<Scolarite />} />
+          <Route path="/professeur-dashboard" element={<Professeur />} />
+          <Route path="/candidat-dashboard" element={<Candidat />} />
+          <Route path="/pole-dashboard" element={<DirecteurPole />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

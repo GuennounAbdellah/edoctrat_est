@@ -7,7 +7,7 @@ export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localho
 export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
 // Endpoint for unified login
-export const UNIFIED_LOGIN_ENDPOINT = '/api/token/';
+export const UNIFIED_LOGIN_ENDPOINT = '/api/login';
 
 // Endpoint for unified Google OAuth
 export const GOOGLE_OAUTH_ENDPOINT = '/api/verify-is-prof/';

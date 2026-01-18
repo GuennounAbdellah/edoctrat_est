@@ -49,15 +49,15 @@ public class UserService {
     @Autowired
     private EmailSenderService emailSenderService;
 
-    // Candidat login - returns JWT tokens
-    public Optional<TokenResponse> loginCandidat(String email, String password) {
-        System.out.println("!!!!!!!Inside loginCandidat with email: " + email + " and password: " + password);
+    // Unified login for all actor types
+    public Optional<TokenResponse> unifiedLogin(String email, String password) {
+        System.out.println("!!!!!!!Inside unifiedLogin with email: " + email + " and password: " + password);
         User user = userRepository.findByEmail(email);
         if (user == null) {
             System.err.println("!!!!!!!User not found with email: " + email);
             return Optional.empty();
         }
-        
+            
         System.out.println("!!!!!!!User found with id: " + user.getId());
         System.out.println("!!!!!!!UserGroups size: " + (user.getUserGroups() != null ? user.getUserGroups().size() : "null"));
         if (user.getUserGroups() != null) {
@@ -65,290 +65,45 @@ public class UserService {
                 System.out.println("!!!!!!!UserGroup id: " + ug.getId() + ", group: " + (ug.getGroup() != null ? ug.getGroup().getName() : "null"));
             }
         }
-        
+            
         if (!passwordEncoder.matches(password, user.getPassword())) {
             System.err.println("!!!!!!!Invalid password for email: " + email);
             return Optional.empty();
         }
-        
+            
         // Null-safe check for userGroups
         if (user.getUserGroups() == null || user.getUserGroups().isEmpty()) {
             System.err.println("!!!!!!!User has no groups assigned: " + email);
             return Optional.empty();
         }
-
-        boolean isCandidat = user.getUserGroups().stream()
-            .filter(userGroup -> userGroup.getGroup() != null)
-            .map(userGroup -> userGroup.getGroup().getName())
-            .anyMatch(name -> "candidat".equalsIgnoreCase(name));
-
-        if (!isCandidat) {
-            System.err.println("!!!!!!!User is not part of the candidat group: " + user.getUserGroups());
-            return Optional.empty();
-        }   
-        
+            
         String accessToken = jwtTokenService.generateAccessToken(
-                user.getUsername(),
+                user.getEmail(),
                 user.getUserGroups().stream()
                         .filter(userGroup -> userGroup.getGroup() != null)
                         .map(userGroup -> userGroup.getGroup().getName())
                         .toList()
         );
         String refreshToken = jwtTokenService.generateRefreshToken(user.getEmail());
-        
-        return Optional.of(TokenResponse.builder()
-                .access(accessToken)
-                .refresh(refreshToken)
-                .build());
-    }
-
-    public Optional<LoginResponse> loginScolarite(String username, String password) {
-        User user = userRepository.findByUsername(username);
-        if (user == null) {
-            return Optional.empty();
-        }
-
-        if (!passwordEncoder.matches(password, user.getPassword())) {
-            return Optional.empty();
-        }
-        
-        // Null-safe check for userGroups
-        if (user.getUserGroups() == null || user.getUserGroups().isEmpty()) {
-            return Optional.empty();
-        }
-        
-        boolean isScolarite = user.getUserGroups().stream()
-                .filter(userGroup -> userGroup.getGroup() != null)
-                .anyMatch(userGroup -> userGroup.getGroup().getName().equalsIgnoreCase("scolarite"));
-        if (!isScolarite) {
-            return Optional.empty();
-        }
-        
-        String accessToken = jwtTokenService.generateAccessToken(
-                user.getUsername(),
-                user.getUserGroups().stream()
-                        .filter(userGroup -> userGroup.getGroup() != null)
-                        .map(userGroup -> userGroup.getGroup().getName())
-                        .toList()
-        );
-        String refreshToken = jwtTokenService.generateRefreshToken(user.getUsername());
-        
-        LoginResponse response = new LoginResponse(
-            accessToken,
-            refreshToken,
-            user.getFirstName(),
-            user.getLastName(),
-            user.getEmail(),
-            null,
-            user.getUserGroups().stream()
+            
+        // Get user groups for role information
+        java.util.List<String> userGroups = user.getUserGroups().stream()
                 .filter(userGroup -> userGroup.getGroup() != null)
                 .map(userGroup -> userGroup.getGroup().getName())
-                .toList(),
-            null
-        );
-        return Optional.of(response);
-    }
-    
-    public Optional<TokenResponse> loginProfesseur(String email, String password) {
-
-        System.out.println("!!!!!!!Inside loginProfesseur with email: " + email + " and password: " + password);
-        User user = userRepository.findByEmail(email);
-        if (user == null) {
-            return Optional.empty();
-        }
-        
-        if (!passwordEncoder.matches(password, user.getPassword())) {
-            return Optional.empty();
-        }
-        
-        /*boolean isProfesseur = user.getGroups().stream()
-                .anyMatch(group -> group.getName().equalsIgnoreCase("professeur"));
-        if (!isProfesseur) {
-            return Optional.empty();
-        }*/
-        
-        Professeur professeur = professeurRepository.findByUser(user).orElse(null);
-        if (professeur == null) {
-            return Optional.empty();
+                .toList();
             
-        }
-        
-        String accessToken = jwtTokenService.generateAccessToken(
-                user.getUsername(),
-                user.getUserGroups().stream()
-                        .map(userGroup -> userGroup.getGroup().getName())
-                        .toList()
-        );
-        String refreshToken = jwtTokenService.generateRefreshToken(user.getUsername());
-
-        return Optional.of(TokenResponse.builder()
+        // Determine primary role (first group or default to candidat)
+        String primaryRole = userGroups.isEmpty() ? "candidat" : userGroups.get(0);
+            
+        System.out.println("!!!!!!!Unified login successful for user: " + email + ", roles: " + userGroups);
+            
+        TokenResponse response = TokenResponse.builder()
                 .access(accessToken)
                 .refresh(refreshToken)
-                .build());
-    }
-   
-    public Optional<TokenResponse> loginDirecteurCed(String email, String password) {
-        System.out.println("!!!!!!!Inside loginDirecteurCed with email: " + email + " and password: " + password);
-        User user = userRepository.findByEmail(email);
-        if (user == null) {
-            System.err.println("!!!!!!!User not found with email: " + email);
-            return Optional.empty();
-        }
-        
-        System.out.println("!!!!!!!User found with id: " + user.getId());
-        
-        if (!passwordEncoder.matches(password, user.getPassword())) {
-            System.err.println("!!!!!!!Invalid password for email: " + email);
-            return Optional.empty();
-        }
-        
-        // Null-safe check for userGroups
-        if (user.getUserGroups() == null || user.getUserGroups().isEmpty()) {
-            System.err.println("!!!!!!!User has no groups assigned: " + email);
-            return Optional.empty();
-        }
-        
-        System.out.println("!!!!!!!UserGroups size: " + user.getUserGroups().size());
-        for (UserGroups ug : user.getUserGroups()) {
-            System.out.println("!!!!!!!UserGroup id: " + ug.getId() + ", group: " + (ug.getGroup() != null ? ug.getGroup().getName() : "null"));
-        }
-        
-        // Check if user is in directeur_ced group
-        boolean isDirecteurCed = user.getUserGroups().stream()
-                    .filter(userGroup -> userGroup.getGroup() != null)
-                    .map(userGroup -> userGroup.getGroup().getName())
-                    .anyMatch(name -> "directeur_ced".equalsIgnoreCase(name));
-        
-        if (!isDirecteurCed) {
-            System.err.println("!!!!!!!User is not part of the directeur_ced group");
-            return Optional.empty();
-        }
-        
-        String accessToken = jwtTokenService.generateAccessToken(
-                user.getEmail(),
-                user.getUserGroups().stream()
-                        .filter(userGroup -> userGroup.getGroup() != null)
-                        .map(userGroup -> userGroup.getGroup().getName())
-                        .toList()
-        );
-        String refreshToken = jwtTokenService.generateRefreshToken(user.getEmail());
-        
-        System.out.println("!!!!!!!Login successful for directeur_ced: " + email);
-        
-        TokenResponse response = new TokenResponse(
-                accessToken,
-                refreshToken
-        );
-        return Optional.of(response);
-    }
-
-    public Optional<TokenResponse> loginDirecteurPole(String email, String password) {
-        System.out.println("!!!!!!!Inside loginDirecteurPole with email: " + email + " and password: " + password);
-        User user = userRepository.findByEmail(email);
-        if (user == null) {
-            System.err.println("!!!!!!!User not found with email: " + email);
-            return Optional.empty();
-        }
-        
-        System.out.println("!!!!!!!User found with id: " + user.getId());
-        
-        if (!passwordEncoder.matches(password, user.getPassword())) {
-            System.err.println("!!!!!!!Invalid password for email: " + email);
-            return Optional.empty();
-        }
-        
-        // Null-safe check for userGroups
-        if (user.getUserGroups() == null || user.getUserGroups().isEmpty()) {
-            System.err.println("!!!!!!!User has no groups assigned: " + email);
-            return Optional.empty();
-        }
-        
-        System.out.println("!!!!!!!UserGroups size: " + user.getUserGroups().size());
-        for (UserGroups ug : user.getUserGroups()) {
-            System.out.println("!!!!!!!UserGroup id: " + ug.getId() + ", group: " + (ug.getGroup() != null ? ug.getGroup().getName() : "null"));
-        }
-        
-        // Check if user is in directeur_pole group
-        boolean isDirecteurPole = user.getUserGroups().stream()
-                    .filter(userGroup -> userGroup.getGroup() != null)
-                    .map(userGroup -> userGroup.getGroup().getName())
-                    .anyMatch(name -> "directeur_pole".equalsIgnoreCase(name));
-        
-        if (!isDirecteurPole) {
-            System.err.println("!!!!!!!User is not part of the directeur_pole group");
-            return Optional.empty();
-        }
-        
-        String accessToken = jwtTokenService.generateAccessToken(
-                user.getEmail(),
-                user.getUserGroups().stream()
-                        .filter(userGroup -> userGroup.getGroup() != null)
-                        .map(userGroup -> userGroup.getGroup().getName())
-                        .toList()
-        );
-        String refreshToken = jwtTokenService.generateRefreshToken(user.getEmail());
-        
-        System.out.println("!!!!!!!Login successful for directeur_pole: " + email);
-        
-        TokenResponse response = new TokenResponse(
-                accessToken,
-                refreshToken
-        );
-        return Optional.of(response);
-    }
-
-    public Optional<TokenResponse> loginDirecteurLabo(String email, String password) {
-        System.out.println("!!!!!!!Inside loginDirecteurLabo with email: " + email + " and password: " + password);
-        User user = userRepository.findByEmail(email);
-        if (user == null) {
-            System.err.println("!!!!!!!User not found with email: " + email);
-            return Optional.empty();
-        }
-        
-        System.out.println("!!!!!!!User found with id: " + user.getId());
-        
-        if (!passwordEncoder.matches(password, user.getPassword())) {
-            System.err.println("!!!!!!!Invalid password for email: " + email);
-            return Optional.empty();
-        }
-        
-        // Null-safe check for userGroups
-        if (user.getUserGroups() == null || user.getUserGroups().isEmpty()) {
-            System.err.println("!!!!!!!User has no groups assigned: " + email);
-            return Optional.empty();
-        }
-        
-        System.out.println("!!!!!!!UserGroups size: " + user.getUserGroups().size());
-        for (UserGroups ug : user.getUserGroups()) {
-            System.out.println("!!!!!!!UserGroup id: " + ug.getId() + ", group: " + (ug.getGroup() != null ? ug.getGroup().getName() : "null"));
-        }
-        
-        // Check if user is in directeur_labo group
-        boolean isDirecteurLabo = user.getUserGroups().stream()
-                    .filter(userGroup -> userGroup.getGroup() != null)
-                    .map(userGroup -> userGroup.getGroup().getName())
-                    .anyMatch(name -> "directeur_labo".equalsIgnoreCase(name));
-        
-        if (!isDirecteurLabo) {
-            System.err.println("!!!!!!!User is not part of the directeur_labo group");
-            return Optional.empty();
-        }
-        
-        String accessToken = jwtTokenService.generateAccessToken(
-                user.getEmail(),
-                user.getUserGroups().stream()
-                        .filter(userGroup -> userGroup.getGroup() != null)
-                        .map(userGroup -> userGroup.getGroup().getName())
-                        .toList()
-        );
-        String refreshToken = jwtTokenService.generateRefreshToken(user.getEmail());
-        
-        System.out.println("!!!!!!!Login successful for directeur_labo: " + email);
-        
-        TokenResponse response = new TokenResponse(
-                accessToken,
-                refreshToken
-        );
+                .role(primaryRole)
+                .groups(userGroups)
+                .email(user.getEmail())
+                .build();
         return Optional.of(response);
     }
 
@@ -381,12 +136,18 @@ public class UserService {
             );
             String refreshToken = jwtTokenService.generateRefreshToken(user.getUsername());
             
-            return Optional.of(AuthProfResponse.builder()
+            java.util.List<String> userGroups = user.getUserGroups().stream()
+                    .map(g -> g.getGroup().getName())
+                    .toList();
+                String primaryRole = userGroups.isEmpty() ? "professeur" : userGroups.get(0);
+                
+                return Optional.of(AuthProfResponse.builder()
                     .email(user.getEmail())
                     .nom(user.getLastName())
                     .prenom(user.getFirstName())
                     .pathPhoto(professeur != null ? professeur.getPathPhoto() : null)
-                    .groups(user.getUserGroups().stream().map(g -> g.getGroup().getName()).toList())
+                    .groups(userGroups)
+                    .role(primaryRole)
                     .access(accessToken)
                     .refresh(refreshToken)
                     .grade(professeur != null ? professeur.getGrade() : null)
@@ -546,14 +307,20 @@ public class UserService {
             if (!jwtTokenService.validateToken(refreshToken)) {
                 return Optional.empty();
             }
-            String username = jwtTokenService.getUsernameFromToken(refreshToken);
-            User user = userRepository.findByUsername(username);
+            String identifier = jwtTokenService.getUsernameFromToken(refreshToken);
+            
+            // Try to find user by username first, then by email
+            User user = userRepository.findByUsername(identifier);
+            if (user == null) {
+                user = userRepository.findByEmail(identifier);
+            }
+            
             if (user == null) {
                 return Optional.empty();
             }
             
             String newAccessToken = jwtTokenService.generateAccessToken(
-                    user.getUsername(),
+                    user.getEmail(), // Use email as identifier
                     user.getUserGroups().stream()
                             .map(userGroup -> userGroup.getGroup().getName())
                             .toList()

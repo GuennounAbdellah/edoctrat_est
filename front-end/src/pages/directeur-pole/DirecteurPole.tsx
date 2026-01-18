@@ -104,7 +104,7 @@ interface CalendrierItem {
 
 type ActiveTab = 'sujets' | 'candidats' | 'commissions' | 'calendrier' | 'communiquer' | 'inscription';
 
-const DirecteurPoleInterface: React.FC = () => {
+const DirecteurPole: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('sujets');
   const [searchTerm, setSearchTerm] = useState('');
   const [sujetFilter, setSujetFilter] = useState('');
@@ -983,4 +983,4 @@ const CalendrierForm: React.FC<CalendrierFormProps> = ({ item, onConfirm, loadin
   );
 };
 
-export default DirecteurPoleInterface;
+export default DirecteurPole;

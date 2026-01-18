@@ -1,9 +1,20 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, GraduationCap, Users, BookOpen, Award, Calendar, FlaskConical, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Layout from '@/components/layout/Layout';
+import { jwtDecode } from 'jwt-decode';
 import heroImage from '@/assets/hero-university.jpg';
+
+interface JwtPayload {
+  exp: number;
+  iat: number;
+  authorities?: string[];
+  roles?: string[];
+  groups?: string[];
+  [key: string]: unknown;
+}
 
 const stats = [
   { label: 'Doctorants', value: '2,500+', icon: Users },
@@ -49,6 +60,72 @@ const roles = [
 ];
 
 const Index = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    const checkAuthStatus = () => {
+      const token = localStorage.getItem('accessToken');
+      if (token) {
+        try {
+          const decoded = jwtDecode<JwtPayload>(token);
+          const currentTime = Date.now() / 1000;
+          
+          if (decoded.exp > currentTime) {
+            setIsLoggedIn(true);
+            
+            // Extract user role from token
+            let roles: string[] = [];
+            if (decoded.roles && Array.isArray(decoded.roles)) {
+              roles = decoded.roles;
+            } else if (decoded.authorities && Array.isArray(decoded.authorities)) {
+              roles = decoded.authorities.map((auth: string) => auth.replace('ROLE_', '').toLowerCase());
+            } else if (decoded.groups && Array.isArray(decoded.groups)) {
+              roles = decoded.groups;
+            }
+            
+            if (roles.length > 0) {
+              setUserRole(roles[0].toLowerCase()); // Use first role
+            }
+          } else {
+            setIsLoggedIn(false);
+            setUserRole(null);
+          }
+        } catch (error) {
+          console.error('Error decoding token:', error);
+          setIsLoggedIn(false);
+          setUserRole(null);
+        }
+      } else {
+        setIsLoggedIn(false);
+        setUserRole(null);
+      }
+    };
+
+    checkAuthStatus();
+
+    // Listen for storage changes to handle logout from other tabs
+    const handleStorageChange = () => {
+      checkAuthStatus();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Determine dashboard link based on user role
+  const getDashboardLink = () => {
+    if (!userRole) return '/login';
+    
+    if (userRole.includes('directeur_ced')) return '/ced-dashboard';
+    if (userRole.includes('directeur_labo')) return '/labo-dashboard';
+    if (userRole.includes('scolarite')) return '/scolarite-dashboard';
+    if (userRole.includes('directeur_pole')) return '/pole-dashboard';
+    if (userRole.includes('professeur')) return '/professeur-dashboard';
+    
+    return '/candidat-dashboard'; // default for candidat
+  };
+
   return (
     <Layout>
       {/* Hero Section */}
@@ -103,17 +180,28 @@ const Index = () => {
               transition={{ duration: 0.6, delay: 0.3 }}
               className="flex flex-col sm:flex-row gap-4"
             >
-              <Link to="/candidat/pre-inscription">
-                <Button variant="hero" size="xl">
-                  Déposer ma candidature
-                  <ArrowRight className="w-5 h-5" />
-                </Button>
-              </Link>
-              <Link to="/login">
-                <Button variant="heroOutline" size="xl">
-                  Se connecter
-                </Button>
-              </Link>
+              {isLoggedIn ? (
+                <Link to={getDashboardLink()}>
+                  <Button variant="hero" size="xl">
+                    Accéder à mon tableau de bord
+                    <ArrowRight className="w-5 h-5" />
+                  </Button>
+                </Link>
+              ) : (
+                <>
+                  <Link to="/candidat/pre-inscription">
+                    <Button variant="hero" size="xl">
+                      Déposer ma candidature
+                      <ArrowRight className="w-5 h-5" />
+                    </Button>
+                  </Link>
+                  <Link to="/login">
+                    <Button variant="heroOutline" size="xl">
+                      Se connecter
+                    </Button>
+                  </Link>
+                </>
+              )}
             </motion.div>
           </div>
         </div>
@@ -273,12 +361,21 @@ const Index = () => {
             <p className="text-xl text-primary-foreground/80 mb-10">
               Rejoignez des milliers de doctorants et chercheurs qui ont choisi l'USMBA pour leur parcours académique.
             </p>
-            <Link to="/candidat/pre-inscription">
-              <Button variant="hero" size="xl">
-                Commencer ma candidature
-                <ArrowRight className="w-5 h-5" />
-              </Button>
-            </Link>
+            {isLoggedIn ? (
+              <Link to={getDashboardLink()}>
+                <Button variant="hero" size="xl">
+                  Accéder à mon tableau de bord
+                  <ArrowRight className="w-5 h-5" />
+                </Button>
+              </Link>
+            ) : (
+              <Link to="/candidat/pre-inscription">
+                <Button variant="hero" size="xl">
+                  Commencer ma candidature
+                  <ArrowRight className="w-5 h-5" />
+                </Button>
+              </Link>
+            )}
           </motion.div>
         </div>
       </section>

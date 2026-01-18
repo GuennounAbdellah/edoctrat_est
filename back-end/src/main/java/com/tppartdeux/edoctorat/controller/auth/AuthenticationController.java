@@ -42,12 +42,12 @@ public class AuthenticationController {
         return ResponseEntity.ok("Directeur CED user created successfully.");
     }
 
-    // POST /api/token/ - Candidat login (JWT token generation)
-    @PostMapping("/token/")
-    public ResponseEntity<?> loginCandidat(@RequestBody TokenRequest tokenRequest) {
-        System.out.println("!!!!!!!Received login request for email: " + tokenRequest.getEmail());
+    // POST /api/login - Unified login endpoint for all actors (JWT token generation)
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody TokenRequest tokenRequest) {
+        System.out.println("!!!!!!!Received unified login request for email: " + tokenRequest.getEmail());
         try {
-            Optional<TokenResponse> token = userService.loginCandidat(
+            Optional<TokenResponse> token = userService.unifiedLogin(
                 tokenRequest.getEmail(), 
                 tokenRequest.getPassword()
             );
@@ -66,63 +66,6 @@ public class AuthenticationController {
                 Map.of("error", "Invalid credentials")
             );
         } 
-    }
-
-        // POST /api/login_scolarite - Scolarite login
-    @PostMapping("/login_scolarite")
-    public ResponseEntity<LoginResponse> loginScolarite(@RequestBody LoginRequest loginRequest) {
-        try {
-            Optional<LoginResponse> token = userService.loginScolarite(loginRequest.getUsername(), loginRequest.getPassword());
-            return token.map(ResponseEntity::ok)
-                    .orElse(ResponseEntity.status(401).build());
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(401).build();
-        }
-    }
-    // POST /api/login_professeur - Professor login
-    @PostMapping("/login_professeur")
-    public ResponseEntity<TokenResponse> loginProfesseur(@RequestBody LoginRequest loginRequest) {
-        try {
-            System.out.println("!!!!!!!Received login request for email: " + loginRequest.getEmail()+", password: " + loginRequest.getPassword());
-            Optional<TokenResponse> token = userService.loginProfesseur(loginRequest.getEmail(), loginRequest.getPassword());
-            return token.map(ResponseEntity::ok)
-                    .orElse(ResponseEntity.status(401).build());
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(401).build();
-        }
-    }
-    @PostMapping("/login_directeur_ced")
-    public ResponseEntity<TokenResponse> loginDirecteurCed(@RequestBody LoginRequest entity) {
-        try {
-            Optional<TokenResponse> response = userService.loginDirecteurCed(entity.getEmail(), entity.getPassword());
-            return response.map(ResponseEntity::ok)
-                    .orElse(ResponseEntity.status(401).build());
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(401).build();
-        }
-        
-    }
-
-    @PostMapping("/login_directeur_pole")
-    public ResponseEntity<TokenResponse> loginDirecteurPole(@RequestBody LoginRequest entity) {
-        try {
-            Optional<TokenResponse> response = userService.loginDirecteurPole(entity.getEmail(), entity.getPassword());
-            return response.map(ResponseEntity::ok)
-                    .orElse(ResponseEntity.status(401).build());
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(401).build();
-        }
-    }
-
-    @PostMapping("/login_directeur_labo")
-    public ResponseEntity<TokenResponse> loginDirecteurLabo(@RequestBody LoginRequest entity) {
-        try {
-            Optional<TokenResponse> response = userService.loginDirecteurLabo(entity.getEmail(), entity.getPassword());
-            return response.map(ResponseEntity::ok)
-                    .orElse(ResponseEntity.status(401).build());
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(401).build();
-        }
     }
     
     // POST /api/verify-is-prof/ - Professor login via Google token
