@@ -15,4 +15,7 @@ import lombok.NoArgsConstructor;
 public class TokenResponse {
     private String access;
     private String refresh;
+    private String role;
+    private java.util.List<String> groups;
+    private String email;
 }

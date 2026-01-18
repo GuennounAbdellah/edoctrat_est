@@ -37,7 +37,8 @@ export const getUserRoleFromToken = (token: string | null): string | null => {
       }
     }
 
-    return roles.length > 0 ? roles[0].toLowerCase() : 'candidat'; // default to candidat
+    // Return primary role or default to candidat
+    return roles.length > 0 ? roles[0].toLowerCase() : 'candidat';
   } catch (error) {
     console.error('Error decoding token:', error);
     return null;
@@ -112,4 +113,76 @@ export const getUserRolesFromToken = (token: string | null): string[] => {
     console.error('Error decoding token:', error);
     return [];
   }
+};
+
+/**
+ * Check if user has a specific role or higher privileged role
+ * Directeur roles (ced, labo, pole) also have professeur privileges
+ * @param token - JWT access token
+ * @param roleToCheck - role to check for
+ * @returns boolean indicating if user has the role
+ */
+export const hasRole = (token: string | null, roleToCheck: string): boolean => {
+  if (!token) return false;
+
+  const userRoles = getUserRolesFromToken(token);
+  
+  // Normalize the role to check
+  const normalizedRole = roleToCheck.toLowerCase();
+  
+  // Check if user has the exact role
+  if (userRoles.includes(normalizedRole)) {
+    return true;
+  }
+  
+  // Define role hierarchy - directeur roles also have professeur privileges
+  const directeurRoles = ['directeur_ced', 'directeur_labo', 'directeur_pole'];
+  
+  // If checking for professeur role, also check for directeur roles
+  if (normalizedRole === 'professeur') {
+    return userRoles.some(role => 
+      role === 'professeur' || directeurRoles.includes(role)
+    );
+  }
+  
+  // For other roles, check exact match
+  return userRoles.includes(normalizedRole);
+};
+
+/**
+ * Get the highest privilege role for the user
+ * @param token - JWT access token
+ * @returns highest privilege role
+ */
+export const getHighestRole = (token: string | null): string => {
+  if (!token) return 'candidat';
+
+  const userRoles = getUserRolesFromToken(token);
+  
+  // Define role hierarchy from highest to lowest
+  const roleHierarchy = [
+    'admin',
+    'directeur_ced',
+    'directeur_labo',
+    'directeur_pole',
+    'professeur',
+    'scolarite',
+    'candidat'
+  ];
+  
+  // Find the highest role the user has
+  for (const role of roleHierarchy) {
+    if (userRoles.includes(role)) {
+      return role;
+    }
+  }
+  
+  // Check for directeur roles that also grant professeur privileges
+  for (const directeurRole of ['directeur_ced', 'directeur_labo', 'directeur_pole']) {
+    if (userRoles.includes(directeurRole)) {
+      return directeurRole;
+    }
+  }
+  
+  return 'candidat';
 };

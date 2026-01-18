@@ -86,12 +86,24 @@ public class UserService {
         );
         String refreshToken = jwtTokenService.generateRefreshToken(user.getEmail());
             
-        System.out.println("!!!!!!!Unified login successful for user: " + email);
+        // Get user groups for role information
+        java.util.List<String> userGroups = user.getUserGroups().stream()
+                .filter(userGroup -> userGroup.getGroup() != null)
+                .map(userGroup -> userGroup.getGroup().getName())
+                .toList();
             
-        TokenResponse response = new TokenResponse(
-                accessToken,
-                refreshToken
-        );
+        // Determine primary role (first group or default to candidat)
+        String primaryRole = userGroups.isEmpty() ? "candidat" : userGroups.get(0);
+            
+        System.out.println("!!!!!!!Unified login successful for user: " + email + ", roles: " + userGroups);
+            
+        TokenResponse response = TokenResponse.builder()
+                .access(accessToken)
+                .refresh(refreshToken)
+                .role(primaryRole)
+                .groups(userGroups)
+                .email(user.getEmail())
+                .build();
         return Optional.of(response);
     }
 
@@ -124,12 +136,18 @@ public class UserService {
             );
             String refreshToken = jwtTokenService.generateRefreshToken(user.getUsername());
             
-            return Optional.of(AuthProfResponse.builder()
+            java.util.List<String> userGroups = user.getUserGroups().stream()
+                    .map(g -> g.getGroup().getName())
+                    .toList();
+                String primaryRole = userGroups.isEmpty() ? "professeur" : userGroups.get(0);
+                
+                return Optional.of(AuthProfResponse.builder()
                     .email(user.getEmail())
                     .nom(user.getLastName())
                     .prenom(user.getFirstName())
                     .pathPhoto(professeur != null ? professeur.getPathPhoto() : null)
-                    .groups(user.getUserGroups().stream().map(g -> g.getGroup().getName()).toList())
+                    .groups(userGroups)
+                    .role(primaryRole)
                     .access(accessToken)
                     .refresh(refreshToken)
                     .grade(professeur != null ? professeur.getGrade() : null)

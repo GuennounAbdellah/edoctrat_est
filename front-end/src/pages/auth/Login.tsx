@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import Layout from '@/components/layout/Layout';
 import { toast } from 'sonner';
 import { API_BASE_URL, GOOGLE_CLIENT_ID, UNIFIED_LOGIN_ENDPOINT, GOOGLE_OAUTH_ENDPOINT } from '@/config/auth';
+import { getUserRoleFromToken, isTokenExpired } from '@/utils/authUtils';
 
 declare global {
   interface Window {
@@ -24,6 +25,17 @@ const Login = () => {
     email: '',
     password: '',
   });
+
+  // Check if user is already logged in and redirect to appropriate dashboard
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    if (token && !isTokenExpired(token)) {
+      const userRole = getUserRoleFromToken(token);
+      if (userRole) {
+        navigate('/');
+      }
+    }
+  }, [navigate]);
 
   const isCandidat = true; // Unified login for all users, treating as candidate by default
 
@@ -53,7 +65,23 @@ const Login = () => {
         
         // Determine user role and redirect accordingly
         // Check the user's groups/roles from the backend response to determine the role
-        const userRole = data.role || data.userRole || (data.groups && data.groups.length > 0 ? data.groups[0] : null);
+        let userRole = null;
+                
+                // Try multiple ways to extract role information from backend
+                if (data.role) {
+                  userRole = data.role;
+                } else if (data.userRole) {
+                  userRole = data.userRole;
+                } else if (data.groups && data.groups.length > 0) {
+                  userRole = data.groups[0];
+                } else if (data.authorities && data.authorities.length > 0) {
+                  userRole = data.authorities[0];
+                } else if (data.roles && data.roles.length > 0) {
+                  userRole = data.roles[0];
+                } else {
+                  // Default to candidat if no role information provided
+                  userRole = 'candidat';
+                }
         
         // Redirect based on user role from backend
         if (userRole && userRole.toLowerCase().includes('directeur_ced')) {
@@ -68,7 +96,7 @@ const Login = () => {
           navigate('/pole-dashboard');
         } else {
           // Default to candidat for regular users
-          navigate('/candidat');
+          navigate('/candidat-dashboard');
         }
       } else {
         toast.error('Erreur lors de la connexion Google');
@@ -143,7 +171,23 @@ const Login = () => {
         
         // Determine user role and redirect accordingly
         // Check the user's groups/roles from the backend response to determine the role
-        const userRole = data.role || data.userRole || (data.groups && data.groups.length > 0 ? data.groups[0] : null);
+        let userRole = null;
+                
+                // Try multiple ways to extract role information from backend
+                if (data.role) {
+                  userRole = data.role;
+                } else if (data.userRole) {
+                  userRole = data.userRole;
+                } else if (data.groups && data.groups.length > 0) {
+                  userRole = data.groups[0];
+                } else if (data.authorities && data.authorities.length > 0) {
+                  userRole = data.authorities[0];
+                } else if (data.roles && data.roles.length > 0) {
+                  userRole = data.roles[0];
+                } else {
+                  // Default to candidat if no role information provided
+                  userRole = 'candidat';
+                }
         
         // Redirect based on user role from backend
         if (userRole && userRole.toLowerCase().includes('directeur_ced')) {
@@ -152,13 +196,13 @@ const Login = () => {
           navigate('/labo-dashboard');
         } else if (userRole && userRole.toLowerCase().includes('scolarite')) {
           navigate('/scolarite-dashboard');
-        } else if (userRole && userRole.toLowerCase().includes('professeurs')) {
+        } else if (userRole && userRole.toLowerCase().includes('professeur')) {
           navigate('/professeur-dashboard');
         } else if (userRole && userRole.toLowerCase().includes('directeur_pole')) {
           navigate('/pole-dashboard');
         } else {
           // Default to candidat for regular users
-          navigate('/candidat');
+          navigate('/candidat-dashboard');
         }
       } else {
         const errorData = await response.json().catch(() => ({}));
@@ -185,7 +229,7 @@ const Login = () => {
           className="w-full max-w-md"
         >
           <Link
-            to="/login"
+            to="/"
             className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors mb-8"
           >
             <ArrowLeft className="w-4 h-4" />

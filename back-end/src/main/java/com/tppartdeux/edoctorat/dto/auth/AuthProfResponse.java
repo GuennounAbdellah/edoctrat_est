@@ -20,6 +20,7 @@ public class AuthProfResponse {
     private String prenom;
     private String pathPhoto;
     private List<String> groups;
+    private String role;
     private String refresh;
     private String access;
     private String grade;

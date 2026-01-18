@@ -30,6 +30,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import Layout from '@/components/layout/Layout';
+import Header from '@/components/layout/Header';
 import { toast } from 'sonner';
 import { directeurCedApi } from '@/api/authService';
 
@@ -209,8 +210,9 @@ const DirecteurCed = () => {
   return (
     <Layout>
       <div className="min-h-screen bg-background">
+        <Header />
         {/* Header Section */}
-        <section className="py-12 lg:py-16 bg-gradient-to-r from-primary/5 to-secondary/5">
+        <section className="py-8 lg:py-12 bg-gradient-to-r from-primary/5 to-secondary/5">
           <div className="container mx-auto px-4 lg:px-8">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -419,25 +421,25 @@ const DirecteurCed = () => {
                 </div>
               )}
 
-              {(!loading && activeTab === 'candidats' && filteredCandidats.length === 0) && (
+              {!loading && activeTab === 'candidats' && filteredCandidats.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   Aucun candidat trouvé
                 </div>
               )}
 
-              {(!loading && activeTab === 'sujets' && filteredSujets.length === 0) && (
+              {!loading && activeTab === 'sujets' && filteredSujets.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   Aucun sujet trouvé
                 </div>
               )}
 
-              {(!loading && activeTab === 'resultats' && filteredResultats.length === 0) && (
+              {!loading && activeTab === 'resultats' && filteredResultats.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   Aucun résultat trouvé
                 </div>
               )}
 
-              {(!loading && activeTab === 'inscrits' && filteredInscrits.length === 0) && (
+              {!loading && activeTab === 'inscrits' && filteredInscrits.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   Aucun inscrit trouvé
                 </div>
