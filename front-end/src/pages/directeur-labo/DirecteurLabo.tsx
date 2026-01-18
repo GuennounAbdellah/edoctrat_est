@@ -14,7 +14,8 @@ import {
   Send,
   CheckCircle,
   Edit,
-  Trash2
+  Trash2,
+  LogOut
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   Table as DataTable,
@@ -31,88 +33,34 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import Layout from '@/components/layout/Layout';
-import Header from '@/components/layout/Header';
 
-// Types
-interface Candidat {
-  id: number;
-  cne: string;
-  pays: string;
-  nom: string;
-  prenom: string;
-  email: string;
-  cin: string;
-  nomCandidatAr: string;
-  prenomCandidatAr: string;
-  adresse: string;
-  adresseAr: string;
-  sexe: string;
-  villeDeNaissance: string;
-  villeDeNaissanceAr: string;
-  ville: string;
-  dateDeNaissance: string;
-  typeDeHandiCape: string;
-  academie: string;
-  telCandidat: string;
-  pathCv: string;
-  pathPhoto: string;
-  etatDossier: number;
-  situation_familiale: string;
-  fonctionnaire: string;
-}
+// Import tab components
+import CandidatesTab from './CandidatesTab';
+import SubjectsTab from './SubjectsTab';
+import CommissionsTab from './CommissionsTab';
+import ResultsTab from './ResultsTab';
+import PreselectionTab from './PreselectionTab';
+import PvGlobalTab from './PvGlobalTab';
 
-interface Professeur {
-  id: number;
-  nom: string;
-  prenom: string;
-}
+// Import models
+import { Candidat } from '@/models/Candidat';
+import { Sujet } from '@/models/Sujet';
+import { Commission } from '@/models/Commission';
+import { FormationDoctorale } from '@/models/FormationDoctorale';
+import { Examiner } from '@/models/Examiner';
+import { Professeur } from '@/models/Professeur';
+import { DirecteurLabo } from '@/models/DirecteurLabo';
 
-interface FormationDoctorale {
-  id: number;
-  nom: string;
-  description: string;
-}
-
-interface Sujet {
-  id: number;
-  titre: string;
-  description: string;
-  motsCles: string;
-  dateDepot: string;
-  publier: boolean;
-  pathFile: string;
-  professeur: Professeur;
-  formationDoctorale: FormationDoctorale;
-}
-
-interface Commission {
-  id: number;
-  dateCommission: string;
-  heure: string;
-  valider: boolean;
-  lieu: string;
-  labo: number;
-  participants: any[];
-  sujets: any[];
-}
-
-interface Examiner {
-  id: number;
-  sujet: Sujet;
-  cne: string;
-  noteDossier: number;
-  noteEntretien: number;
-  decision: string;
-  commission: number;
-  candidat: Candidat;
-  publier: boolean;
-}
+// Import services
+import { DirecteurLaboService } from '@/api/directeurLaboService';
 
 const DirecteurLaboInterface: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'candidats' | 'sujets' | 'commissions' | 'preselection' | 'resultats' | 'pv'>('candidats');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // State for logged-in director
+  const [loggedDirector, setLoggedDirector] = useState<DirecteurLabo | null>(null);
 
   // State for data
   const [candidats, setCandidats] = useState<Candidat[]>([]);
@@ -126,6 +74,9 @@ const DirecteurLaboInterface: React.FC = () => {
   const [isCommissionDialogOpen, setIsCommissionDialogOpen] = useState(false);
   const [isCandidateDetailDialogOpen, setIsCandidateDetailDialogOpen] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidat | null>(null);
+  
+  // Logout confirmation state
+  const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
 
   // Form states
   const [sujetFormData, setSujetFormData] = useState({
@@ -143,6 +94,41 @@ const DirecteurLaboInterface: React.FC = () => {
   });
 
   useEffect(() => {
+    // Fetch logged-in director data from localStorage or auth context
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        const userData = JSON.parse(storedUser);
+        const directorData: DirecteurLabo = {
+          id: userData.id,
+          nom: userData.nom || userData.lastName,
+          prenom: userData.prenom || userData.firstName,
+          email: userData.email,
+          departement: userData.departement || 'Informatique'
+        };
+        setLoggedDirector(directorData);
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        // Fallback to a default director
+        setLoggedDirector({
+          id: 1,
+          nom: 'Directeur',
+          prenom: 'Laboratoire',
+          email: 'directeur@labo.ma',
+          departement: 'Informatique'
+        });
+      }
+    } else {
+      // If no user data in localStorage, use a default director
+      setLoggedDirector({
+        id: 1,
+        nom: 'Directeur',
+        prenom: 'Laboratoire',
+        email: 'directeur@labo.ma',
+        departement: 'Informatique'
+      });
+    }
+    
     fetchAllData();
   }, []);
 
@@ -162,144 +148,171 @@ const DirecteurLaboInterface: React.FC = () => {
   };
 
   const fetchCandidats = async () => {
-    const mockCandidats: Candidat[] = [
-      {
-        id: 1,
-        cne: 'CNE001',
-        pays: 'Maroc',
-        nom: 'Benali',
-        prenom: 'Ahmed',
-        email: 'ahmed.benali@email.com',
-        cin: 'AB123456',
-        nomCandidatAr: 'أحمد بن علي',
-        prenomCandidatAr: 'أحمد',
-        adresse: 'Adresse 1',
-        adresseAr: 'العنوان 1',
-        sexe: 'Masculin',
-        villeDeNaissance: 'Fès',
-        villeDeNaissanceAr: 'فاس',
-        ville: 'Fès',
-        dateDeNaissance: '1990-01-15',
-        typeDeHandiCape: 'Non',
-        academie: 'Fès-Meknès',
-        telCandidat: '0600000001',
-        pathCv: '',
-        pathPhoto: '',
-        etatDossier: 1,
-        situation_familiale: 'Célibataire',
-        fonctionnaire: 'Non'
-      }
-    ];
-    setCandidats(mockCandidats);
+    try {
+      const response = await DirecteurLaboService.getAllCandidats();
+      // Transform backend response to frontend Candidat model
+      const transformedCandidats: Candidat[] = response.results.map(item => ({
+        id: item.id,
+        cne: item.cne,
+        pays: item.pays,
+        nom: item.nom,
+        prenom: item.prenom,
+        email: item.email,
+        cin: item.cin,
+        nomCandidatAr: item.nomCandidatAr,
+        prenomCandidatAr: item.prenomCandidatAr,
+        adresse: item.adresse,
+        adresseAr: item.adresseAr,
+        sexe: item.sexe,
+        villeDeNaissance: item.villeDeNaissance,
+        villeDeNaissanceAr: item.villeDeNaissanceAr,
+        ville: item.ville,
+        dateDeNaissance: item.dateDeNaissance,
+        typeDeHandiCape: item.typeDeHandiCape,
+        academie: item.academie,
+        telCandidat: item.telCandidat,
+        pathCv: item.pathCv,
+        pathPhoto: item.pathPhoto,
+        etatDossier: item.etatDossier,
+        situation_familiale: item.situation_familiale,
+        fonctionnaire: item.fonctionnaire
+      }));
+      setCandidats(transformedCandidats);
+    } catch (error) {
+      console.error('Error fetching candidats:', error);
+      setCandidats([]); // Empty array instead of mock data
+    }
   };
 
   const fetchSujets = async () => {
-    const mockSujets: Sujet[] = [
-      {
-        id: 1,
-        titre: 'Intelligence Artificielle appliquée aux systèmes embarqués',
-        description: 'Recherche sur l\'optimisation des algorithmes IA pour les microcontrôleurs',
-        motsCles: 'IA, systèmes embarqués, optimisation',
-        dateDepot: '2024-01-15',
-        publier: true,
-        pathFile: '',
-        professeur: { id: 1, nom: 'El Amrani', prenom: 'Karim' },
-        formationDoctorale: { id: 1, nom: 'Informatique', description: 'Formation en informatique' }
-      }
-    ];
-    setSujets(mockSujets);
+    try {
+      const response = await DirecteurLaboService.getAllSujets();
+      // Transform backend response to frontend Sujet model
+      const transformedSujets: Sujet[] = response.results.map(item => ({
+        id: item.id,
+        titre: item.titre,
+        description: item.description,
+        motsCles: item.motsCles,
+        dateDepot: item.dateDepot,
+        publier: item.publier,
+        pathFile: item.pathFile,
+        professeur: item.professeur,
+        formationDoctorale: item.formationDoctorale
+      }));
+      setSujets(transformedSujets);
+    } catch (error) {
+      console.error('Error fetching sujets:', error);
+      setSujets([]); // Empty array instead of mock data
+    }
   };
 
   const fetchCommissions = async () => {
-    const mockCommissions: Commission[] = [
-      {
-        id: 1,
-        dateCommission: '2024-02-15',
-        heure: '14:00',
-        valider: false,
-        lieu: 'Salle de conférence A',
-        labo: 1,
-        participants: [],
-        sujets: []
-      }
-    ];
-    setCommissions(mockCommissions);
+    try {
+      const response = await DirecteurLaboService.getAllCommissions();
+      // Transform backend response to frontend Commission model
+      const transformedCommissions: Commission[] = response.results.map(item => ({
+        id: item.id,
+        dateCommission: item.dateCommission,
+        heure: item.heure,
+        valider: item.valider,
+        lieu: item.lieu,
+        labo: item.labo,
+        participants: item.participants,
+        sujets: item.sujets
+      }));
+      setCommissions(transformedCommissions);
+    } catch (error) {
+      console.error('Error fetching commissions:', error);
+      setCommissions([]); // Empty array instead of mock data
+    }
   };
 
   const fetchFormations = async () => {
-    const mockFormations: FormationDoctorale[] = [
-      { id: 1, nom: 'Informatique', description: 'Formation en informatique' },
-      { id: 2, nom: 'Mathématiques', description: 'Formation en mathématiques' },
-      { id: 3, nom: 'Physique', description: 'Formation en physique' },
-      { id: 4, nom: 'Chimie', description: 'Formation en chimie' }
-    ];
-    setFormations(mockFormations);
+    try {
+      const response = await DirecteurLaboService.getLaboProfesseurs();
+      // Transform backend response to frontend FormationDoctorale model
+      // Note: We're using labo professeurs endpoint as placeholder
+      // In a real implementation, there should be a dedicated formations endpoint
+      const transformedFormations: FormationDoctorale[] = [
+        { id: 1, nom: 'Informatique', description: 'Formation en informatique' },
+        { id: 2, nom: 'Mathématiques', description: 'Formation en mathématiques' },
+        { id: 3, nom: 'Physique', description: 'Formation en physique' },
+        { id: 4, nom: 'Chimie', description: 'Formation en chimie' }
+      ];
+      setFormations(transformedFormations);
+    } catch (error) {
+      console.error('Error fetching formations:', error);
+      setFormations([]); // Empty array instead of mock data
+    }
   };
 
   const fetchResults = async () => {
-    const mockResults: Examiner[] = [
-      {
-        id: 1,
-        sujet: {
-          id: 1,
-          titre: 'IA embarquée',
-          description: 'Sujet de recherche sur l\'intelligence artificielle embarquée',
-          motsCles: 'IA, embarqué',
-          dateDepot: '2024-01-15',
-          publier: true,
-          pathFile: '',
-          professeur: { id: 1, nom: 'El Amrani', prenom: 'Karim' },
-          formationDoctorale: { id: 1, nom: 'Informatique', description: 'Formation en informatique' }
-        },
-        cne: 'CNE001',
-        noteDossier: 16,
-        noteEntretien: 14,
-        decision: 'Admis',
-        commission: 1,
-        candidat: {
-          id: 1,
-          cne: 'CNE001',
-          pays: 'Maroc',
-          nom: 'Benali',
-          prenom: 'Ahmed',
-          email: 'ahmed.benali@email.com',
-          cin: 'AB123456',
-          nomCandidatAr: 'أحمد بن علي',
-          prenomCandidatAr: 'أحمد',
-          adresse: 'Adresse 1',
-          adresseAr: 'العنوان 1',
-          sexe: 'Masculin',
-          villeDeNaissance: 'Fès',
-          villeDeNaissanceAr: 'فاس',
-          ville: 'Fès',
-          dateDeNaissance: '1990-01-15',
-          typeDeHandiCape: 'Non',
-          academie: 'Fès-Meknès',
-          telCandidat: '0600000001',
-          pathCv: '',
-          pathPhoto: '',
-          etatDossier: 1,
-          situation_familiale: 'Célibataire',
-          fonctionnaire: 'Non'
-        },
-        publier: true
-      }
-    ];
-    setResults(mockResults);
+    try {
+      const response = await DirecteurLaboService.getLaboCandidats();
+      // Transform backend response to frontend Examiner model
+      const transformedResults: Examiner[] = response.results.map(item => ({
+        id: item.id,
+        sujet: item.sujet,
+        cne: item.cne,
+        noteDossier: item.noteDossier,
+        noteEntretien: item.noteEntretien,
+        decision: item.decision,
+        commission: item.commission,
+        candidat: item.candidat,
+        publier: item.publier
+      }));
+      setResults(transformedResults);
+    } catch (error) {
+      console.error('Error fetching results:', error);
+      setResults([]); // Empty array instead of mock data
+    }
   };
 
   const handleCreateSujet = async () => {
-    console.log('Creating sujet:', sujetFormData);
-    setSujetFormData({ titre: '', directeur: '', coDirecteur: '', formationDoctorale: '' });
-    setIsSujetDialogOpen(false);
-    await fetchSujets();
+    try {
+      const newSujet = {
+        titre: sujetFormData.titre,
+        professeur: { id: parseInt(sujetFormData.directeur) } as Professeur,
+        formationDoctorale: { id: parseInt(sujetFormData.formationDoctorale) } as FormationDoctorale,
+        description: '',
+        motsCles: '',
+        dateDepot: new Date().toISOString().split('T')[0],
+        publier: false,
+        pathFile: ''
+      };
+      
+      await DirecteurLaboService.createSujet(newSujet);
+      setSujetFormData({ titre: '', directeur: '', coDirecteur: '', formationDoctorale: '' });
+      setIsSujetDialogOpen(false);
+      await fetchSujets();
+    } catch (error) {
+      console.error('Error creating sujet:', error);
+      setSujetFormData({ titre: '', directeur: '', coDirecteur: '', formationDoctorale: '' });
+      setIsSujetDialogOpen(false);
+      await fetchSujets();
+    }
   };
 
   const handleCreateCommission = async () => {
-    console.log('Creating commission:', commissionFormData);
-    setCommissionFormData({ dateCommission: '', heure: '', lieu: '', sujetIds: [] });
-    setIsCommissionDialogOpen(false);
-    await fetchCommissions();
+    try {
+      const newCommission = {
+        dateCommission: commissionFormData.dateCommission,
+        heure: commissionFormData.heure,
+        lieu: commissionFormData.lieu,
+        labo: 1, // Default labo ID
+        valider: false
+      };
+      
+      await DirecteurLaboService.createCommission(newCommission);
+      setCommissionFormData({ dateCommission: '', heure: '', lieu: '', sujetIds: [] });
+      setIsCommissionDialogOpen(false);
+      await fetchCommissions();
+    } catch (error) {
+      console.error('Error creating commission:', error);
+      setCommissionFormData({ dateCommission: '', heure: '', lieu: '', sujetIds: [] });
+      setIsCommissionDialogOpen(false);
+      await fetchCommissions();
+    }
   };
 
   const handleDownloadPV = (format: 'pdf' | 'excel') => {
@@ -307,8 +320,25 @@ const DirecteurLaboInterface: React.FC = () => {
   };
 
   const handleValidateCommission = async (commissionId: number) => {
-    console.log('Validating commission:', commissionId);
-    await fetchCommissions();
+    try {
+      await DirecteurLaboService.validateCommission(commissionId, { valider: true });
+      await fetchCommissions();
+    } catch (error) {
+      console.error('Error validating commission:', error);
+      await fetchCommissions(); // Refresh anyway to show current state
+    }
+  };
+
+  const handleLogout = () => {
+    // Clear authentication tokens from localStorage
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    
+    // Redirect to login page
+    window.location.href = '/login';
+    
+    // Close the confirmation dialog
+    setShowLogoutConfirmation(false);
   };
 
   const handleViewCandidateDetails = (candidateId: number) => {
@@ -372,24 +402,62 @@ const DirecteurLaboInterface: React.FC = () => {
   };
 
   return (
-    <Layout>
-      <div className="min-h-screen bg-background">
-      <Header />
+    <div className="min-h-screen bg-background">
       {/* Header Section */}
-      <section className="py-8 lg:py-12 bg-gradient-to-r from-primary/5 to-secondary/5">
+      <section className="py-6 lg:py-8 bg-gradient-to-r from-primary/10 to-secondary/10 border-b border-border">
         <div className="container mx-auto px-4 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="max-w-4xl mx-auto text-center"
-          >
-            <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-4">
-              Espace Directeur de Laboratoire
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Gestion et supervision des candidats, sujets et commissions
-            </p>
-          </motion.div>
+          <div className="flex flex-col lg:flex-row justify-between items-center gap-6 max-w-6xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center lg:text-left order-2 lg:order-1"
+            >
+              <h1 className="text-2xl md:text-3xl font-serif font-bold text-foreground">
+                Espace Directeur de Laboratoire
+              </h1>
+              <p className="text-sm md:text-base text-muted-foreground mt-1">
+                Gestion et supervision des candidats, sujets et commissions
+              </p>
+            </motion.div>
+            
+            {/* Logout button with director's name */}
+            {loggedDirector && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg p-3 shadow-sm border border-border min-w-[200px] order-1 lg:order-2"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="bg-primary/10 p-2 rounded-full">
+                    <GraduationCap className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-xs text-muted-foreground">Connecté en tant que</p>
+                    <p className="font-medium text-sm">{loggedDirector.prenom} {loggedDirector.nom}</p>
+                  </div>
+                </div>
+                <AlertDialog open={showLogoutConfirmation} onOpenChange={setShowLogoutConfirmation}>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" size="icon" className="rounded-full h-9 w-9">
+                      <LogOut className="w-4 h-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Confirmer la déconnexion</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Êtes-vous sûr de vouloir vous déconnecter ? Vous devrez vous reconnecter pour accéder à votre espace.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Annuler</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleLogout}>Déconnexion</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </motion.div>
+            )}
+          </div>
         </div>
       </section>
 
@@ -486,228 +554,47 @@ const DirecteurLaboInterface: React.FC = () => {
             {!loading && (
               <div className="overflow-x-auto">
                 {activeTab === 'candidats' && (
-                  <DataTable>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>CNE</TableHead>
-                        <TableHead>Candidat</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Téléphone</TableHead>
-                        <TableHead>Ville</TableHead>
-                        <TableHead>État du dossier</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredCandidats.map((candidat) => (
-                        <TableRow key={candidat.id}>
-                          <TableCell>
-                            <Button 
-                              variant="link" 
-                              className="p-0 h-auto font-normal text-blue-600 hover:text-blue-800"
-                              onClick={() => handleViewCandidateDetails(candidat.id)}
-                            >
-                              {candidat.cne}
-                            </Button>
-                          </TableCell>
-                          <TableCell className="font-medium">{candidat.nom} {candidat.prenom}</TableCell>
-                          <TableCell>{candidat.email}</TableCell>
-                          <TableCell>{candidat.telCandidat}</TableCell>
-                          <TableCell>{candidat.ville}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">
-                              {candidat.etatDossier === 1 ? 'Validé' : 'En cours'}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </DataTable>
+                  <CandidatesTab 
+                    candidats={candidats}
+                    searchTerm={searchTerm}
+                    onViewCandidateDetails={handleViewCandidateDetails}
+                  />
                 )}
 
                 {activeTab === 'sujets' && (
-                  <DataTable>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Titre</TableHead>
-                        <TableHead>Directeur</TableHead>
-                        <TableHead>Formation Doctorale</TableHead>
-                        <TableHead>Date dépôt</TableHead>
-                        <TableHead>Statut</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredSujets.map((sujet) => (
-                        <TableRow key={sujet.id}>
-                          <TableCell className="font-medium">{sujet.titre}</TableCell>
-                          <TableCell>{sujet.professeur.nom} {sujet.professeur.prenom}</TableCell>
-                          <TableCell>{sujet.formationDoctorale.nom}</TableCell>
-                          <TableCell>{new Date(sujet.dateDepot).toLocaleDateString()}</TableCell>
-                          <TableCell>{getPublicationBadge(sujet.publier)}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button variant="outline" size="sm">
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button variant="outline" size="sm">
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </DataTable>
+                  <SubjectsTab 
+                    sujets={sujets}
+                    searchTerm={searchTerm}
+                    onAddSubject={() => setIsSujetDialogOpen(true)}
+                  />
                 )}
 
                 {activeTab === 'commissions' && (
-                  <DataTable>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Heure</TableHead>
-                        <TableHead>Lieu</TableHead>
-                        <TableHead>Statut</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredCommissions.map((commission) => (
-                        <TableRow key={commission.id}>
-                          <TableCell>{new Date(commission.dateCommission).toLocaleDateString()}</TableCell>
-                          <TableCell>{commission.heure}</TableCell>
-                          <TableCell>{commission.lieu}</TableCell>
-                          <TableCell>{getStatusBadge(commission.valider)}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button variant="outline" size="sm">
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => handleValidateCommission(commission.id)}
-                              >
-                                <CheckCircle className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </DataTable>
+                  <CommissionsTab 
+                    commissions={commissions}
+                    searchTerm={searchTerm}
+                    onCreateCommission={() => setIsCommissionDialogOpen(true)}
+                    onValidateCommission={handleValidateCommission}
+                  />
                 )}
 
                 {activeTab === 'preselection' && (
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-lg font-semibold">Candidats présélectionnés</h3>
-                      <Button variant="outline" className="flex items-center gap-2">
-                        <Send className="w-4 h-4" />
-                        Envoyer convocations
-                      </Button>
-                    </div>
-                    <DataTable>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Candidat</TableHead>
-                          <TableHead>Sujet</TableHead>
-                          <TableHead>Note dossier</TableHead>
-                          <TableHead>Statut</TableHead>
-                          <TableHead>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        <TableRow>
-                          <TableCell className="font-medium">Ahmed Benali</TableCell>
-                          <TableCell>IA embarquée</TableCell>
-                          <TableCell>15/20</TableCell>
-                          <TableCell>
-                            <Badge className="bg-blue-500">Présélectionné</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button variant="outline" size="sm">Convocation</Button>
-                              <Button variant="outline" size="sm">Annuler</Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </DataTable>
-                  </div>
+                  <PreselectionTab 
+                  />
                 )}
 
                 {activeTab === 'resultats' && (
-                  <DataTable>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>CNE</TableHead>
-                        <TableHead>Candidat</TableHead>
-                        <TableHead>Sujet</TableHead>
-                        <TableHead>Note entretien</TableHead>
-                        <TableHead>Moyenne générale</TableHead>
-                        <TableHead>Décision</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredResults.map((result) => (
-                        <TableRow key={result.id}>
-                          <TableCell className="font-medium">{result.cne}</TableCell>
-                          <TableCell>{result.candidat?.nom} {result.candidat?.prenom}</TableCell>
-                          <TableCell>{result.sujet?.titre}</TableCell>
-                          <TableCell>{result.noteEntretien}/20</TableCell>
-                          <TableCell>{((result.noteDossier + result.noteEntretien) / 2).toFixed(2)}/20</TableCell>
-                          <TableCell>{getDecisionBadge(result.decision)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </DataTable>
+                  <ResultsTab 
+                    results={results}
+                    searchTerm={searchTerm}
+                    onViewCandidateDetails={handleViewCandidateDetails}
+                  />
                 )}
 
                 {activeTab === 'pv' && (
-                  <div className="space-y-6">
-                    <div className="p-6 bg-blue-50 rounded-lg">
-                      <h3 className="font-semibold mb-2">Générer le procès-verbal global</h3>
-                      <p className="text-sm text-gray-600 mb-4">
-                        Ce document contient l'ensemble des résultats, décisions et statistiques 
-                        de la session de doctorat en cours.
-                      </p>
-                      <div className="flex gap-3">
-                        <Button onClick={() => handleDownloadPV('pdf')} className="flex items-center gap-2">
-                          <Download className="w-4 h-4" />
-                          Télécharger PV (PDF)
-                        </Button>
-                        <Button variant="outline" onClick={() => handleDownloadPV('excel')} className="flex items-center gap-2">
-                          <Download className="w-4 h-4" />
-                          Télécharger PV (Excel)
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="border-t pt-6">
-                      <h3 className="font-semibold mb-4">Statistiques générales</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Card>
-                          <CardContent className="p-6 text-center">
-                            <div className="text-3xl font-bold text-blue-600">24</div>
-                            <div className="text-sm text-gray-500 mt-2">Candidats évalués</div>
-                          </CardContent>
-                        </Card>
-                        <Card>
-                          <CardContent className="p-6 text-center">
-                            <div className="text-3xl font-bold text-green-600">18</div>
-                            <div className="text-sm text-gray-500 mt-2">Candidats admis</div>
-                          </CardContent>
-                        </Card>
-                        <Card>
-                          <CardContent className="p-6 text-center">
-                            <div className="text-3xl font-bold text-orange-600">6</div>
-                            <div className="text-sm text-gray-500 mt-2">Candidats ajournés</div>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    </div>
-                  </div>
+                  <PvGlobalTab 
+                    onDownloadPV={handleDownloadPV}
+                  />
                 )}
               </div>
             )}
@@ -1028,7 +915,6 @@ const DirecteurLaboInterface: React.FC = () => {
         </DialogContent>
       </Dialog>
     </div>
-    </Layout>
   );
 };
 
