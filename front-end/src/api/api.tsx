@@ -6,7 +6,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const instance = axios.create({
   baseURL: API_URL,
   timeout: 15000,
-  withCredentials: true
+  withCredentials: false
 });
 
 // Request interceptor
@@ -90,3 +90,7 @@ export const api = {
   put: (url, data, config) => instance.put(url, data, config),
   delete: (url, config) => instance.delete(url, config)
 };
+
+// Alias for backward compatibility
+export const apiClient = instance;
+export default instance;

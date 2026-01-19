@@ -177,4 +177,18 @@ public class DtoMapperService {
                 .pour(calendrier.getPour())
                 .build();
     }
+    
+    public PostulerResponse toPostulerResponse(CandidatPostulerDTO candidatPostulerDTO) {
+        if (candidatPostulerDTO == null) return null;
+        return PostulerResponse.builder()
+                .id(null) // CandidatPostulerDTO doesn't have ID, so set to null
+                .pathFile(null) // CandidatPostulerDTO doesn't have pathFile
+                .sujet(SujetResponse.builder().titre(candidatPostulerDTO.getSujetTitre()).build())
+                .candidat(CandidatResponse.builder()
+                    .cne(candidatPostulerDTO.getCne())
+                    .nom(candidatPostulerDTO.getNom())
+                    .prenom(candidatPostulerDTO.getPrenom())
+                    .build())
+                .build();
+    }
 }

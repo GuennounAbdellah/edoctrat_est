@@ -1,4 +1,4 @@
-package com.tppartdeux.edoctorat.dto;
+package com.tppartdeux.edoctorat.dto.professeur;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
