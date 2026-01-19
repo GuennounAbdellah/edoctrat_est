@@ -12,7 +12,7 @@ const instance = axios.create({
 // Request interceptor
 instance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('accessToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -42,13 +42,11 @@ instance.interceptors.response.use(
           // For your app, implement a proper token refresh if needed
           // For now, just redirect to login
           console.log('Authentication expired. Redirecting to login');
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
+          localStorage.removeItem('accessToken');
           window.location.href = '/login';
           return Promise.reject(error);
         } catch (refreshError) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
+          localStorage.removeItem('accessToken');
           window.location.href = '/login';
           return Promise.reject(refreshError);
         }

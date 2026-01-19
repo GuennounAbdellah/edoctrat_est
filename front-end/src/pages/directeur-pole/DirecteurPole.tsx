@@ -4,105 +4,33 @@ import {
   Users,
   BookOpen,
   FileText,
-  Download,
   Calendar,
   Search,
-  Eye,
-  Send,
-  CheckCircle,
   Building2,
   MessageSquare,
-  ClipboardList
+  ClipboardList,
+  LogOut,
+  GraduationCap
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
-import {
-  Table as DataTable,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { useToast } from '@/components/ui/use-toast';
-
-// Types
-interface Professeur {
-  id: number;
-  nom: string;
-  prenom: string;
-}
-
-interface FormationDoctorale {
-  id: number;
-  titre: string;
-  ced: {
-    id: number;
-    titre: string;
-  };
-}
-
-interface Laboratoire {
-  id: number;
-  nom: string;
-}
-
-interface Sujet {
-  id: number;
-  titre: string;
-  description: string;
-  motsCles: string;
-  dateDepot: string;
-  publier: boolean;
-  professeur: Professeur;
-  coDirecteur: Professeur | null;
-  formationDoctorale: FormationDoctorale;
-  laboratoire: Laboratoire;
-}
-
-interface Candidat {
-  id: number;
-  cne: string;
-  nom: string;
-  prenom: string;
-  email: string;
-}
-
-interface Postuler {
-  id: number;
-  candidat: Candidat;
-  sujet: Sujet;
-}
-
-interface Commission {
-  id: number;
-  dateCommission: string;
-  heure: string;
-  lieu: string;
-  valider: boolean;
-  sujets: { id: number; titre: string }[];
-  participants: { id: number; nom: string; prenom: string }[];
-  labo: string;
-}
-
-interface CalendrierItem {
-  id: number;
-  action: string;
-  dateDebut: string;
-  dateFin: string;
-}
-
-type ActiveTab = 'sujets' | 'candidats' | 'commissions' | 'calendrier' | 'communiquer' | 'inscription';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import {
+  SujetsTab,
+  CandidatsTab,
+  CandidatureDetailsDialog,
+  CommissionsTab,
+  CalendrierTab,
+  CommuniquerTab,
+  InscriptionTab,
+  ActiveTab
+} from './components';
+import { Postuler } from '@/models/Postuler';
+import { Commission } from '@/models/Commission';
+import { Sujet } from '@/models/Sujet';
+import directeurPoleService, { DirecteurPoleCalendrier } from '@/api/directeurPoleService';
 
 const DirecteurPole: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('sujets');
@@ -117,188 +45,117 @@ const DirecteurPole: React.FC = () => {
   const [sujets, setSujets] = useState<Sujet[]>([]);
   const [candidatures, setCandidatures] = useState<Postuler[]>([]);
   const [commissions, setCommissions] = useState<Commission[]>([]);
-  const [calendrier, setCalendrier] = useState<CalendrierItem[]>([]);
+  const [calendrier, setCalendrier] = useState<DirecteurPoleCalendrier[]>([]);
 
   // Dialog states
   const [isCandidateDetailDialogOpen, setIsCandidateDetailDialogOpen] = useState(false);
   const [selectedCandidature, setSelectedCandidature] = useState<Postuler | null>(null);
+  
+  // Logout confirmation state
+  const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
 
-  // Fetch functions defined before useEffect
+  // State for logged-in director
+  const [loggedDirector, setLoggedDirector] = useState<{ nom: string; prenom: string; email: string } | null>(null);
+
+  // Fetch functions
   const fetchSujets = async () => {
-    // Mock data for sujets
-    const mockSujets: Sujet[] = [
-      {
-        id: 1,
-        titre: 'Intelligence Artificielle appliquée aux systèmes embarqués',
-        description: 'Recherche sur l\'optimisation des algorithmes IA pour les microcontrôleurs',
-        motsCles: 'IA, systèmes embarqués, optimisation',
-        dateDepot: '2024-01-15',
-        publier: true,
-        professeur: { id: 1, nom: 'El Amrani', prenom: 'Karim' },
-        coDirecteur: { id: 2, nom: 'Bennani', prenom: 'Hassan' },
-        formationDoctorale: { id: 1, titre: 'Informatique et Systèmes', ced: { id: 1, titre: 'Sciences et Techniques' } },
-        laboratoire: { id: 1, nom: 'LIIAN' }
-      },
-      {
-        id: 2,
-        titre: 'Analyse des données massives pour la prédiction climatique',
-        description: 'Utilisation du Big Data pour améliorer les modèles climatiques',
-        motsCles: 'Big Data, climat, machine learning',
-        dateDepot: '2024-01-20',
-        publier: true,
-        professeur: { id: 3, nom: 'Alaoui', prenom: 'Fatima' },
-        coDirecteur: null,
-        formationDoctorale: { id: 2, titre: 'Sciences des Données', ced: { id: 1, titre: 'Sciences et Techniques' } },
-        laboratoire: { id: 2, nom: 'LSIA' }
-      },
-      {
-        id: 3,
-        titre: 'Cybersécurité des réseaux IoT industriels',
-        description: 'Sécurisation des infrastructures IoT dans l\'industrie 4.0',
-        motsCles: 'IoT, cybersécurité, industrie 4.0',
-        dateDepot: '2024-02-01',
-        publier: false,
-        professeur: { id: 4, nom: 'Rachidi', prenom: 'Mohammed' },
-        coDirecteur: { id: 5, nom: 'Tazi', prenom: 'Nadia' },
-        formationDoctorale: { id: 1, titre: 'Informatique et Systèmes', ced: { id: 1, titre: 'Sciences et Techniques' } },
-        laboratoire: { id: 1, nom: 'LIIAN' }
+    try {
+      const result = await directeurPoleService.getAllSujets();
+      if (result.results) {
+        setSujets(result.results as Sujet[]);
+      } else {
+        throw new Error('No data received');
       }
-    ];
-    setSujets(mockSujets);
+    } catch (error) {
+      console.error('Error fetching sujets:', error);
+      toast({
+        title: "Erreur",
+        description: "Erreur lors du chargement des sujets",
+        variant: "destructive"
+      });
+    }
   };
 
   const fetchCandidatures = async () => {
-    // Mock data for candidatures
-    const mockCandidatures: Postuler[] = [
-      {
-        id: 1,
-        candidat: { id: 1, cne: 'CNE001', nom: 'Benali', prenom: 'Ahmed', email: 'ahmed.benali@email.com' },
-        sujet: {
-          id: 1,
-          titre: 'Intelligence Artificielle appliquée aux systèmes embarqués',
-          description: '',
-          motsCles: '',
-          dateDepot: '2024-01-15',
-          publier: true,
-          professeur: { id: 1, nom: 'El Amrani', prenom: 'Karim' },
-          coDirecteur: { id: 2, nom: 'Bennani', prenom: 'Hassan' },
-          formationDoctorale: { id: 1, titre: 'Informatique et Systèmes', ced: { id: 1, titre: 'Sciences et Techniques' } },
-          laboratoire: { id: 1, nom: 'LIIAN' }
-        }
-      },
-      {
-        id: 2,
-        candidat: { id: 2, cne: 'CNE002', nom: 'Idrissi', prenom: 'Sara', email: 'sara.idrissi@email.com' },
-        sujet: {
-          id: 2,
-          titre: 'Analyse des données massives pour la prédiction climatique',
-          description: '',
-          motsCles: '',
-          dateDepot: '2024-01-20',
-          publier: true,
-          professeur: { id: 3, nom: 'Alaoui', prenom: 'Fatima' },
-          coDirecteur: null,
-          formationDoctorale: { id: 2, titre: 'Sciences des Données', ced: { id: 1, titre: 'Sciences et Techniques' } },
-          laboratoire: { id: 2, nom: 'LSIA' }
-        }
-      },
-      {
-        id: 3,
-        candidat: { id: 3, cne: 'CNE003', nom: 'Oulad', prenom: 'Youssef', email: 'youssef.oulad@email.com' },
-        sujet: {
-          id: 3,
-          titre: 'Cybersécurité des réseaux IoT industriels',
-          description: '',
-          motsCles: '',
-          dateDepot: '2024-02-01',
-          publier: false,
-          professeur: { id: 4, nom: 'Rachidi', prenom: 'Mohammed' },
-          coDirecteur: { id: 5, nom: 'Tazi', prenom: 'Nadia' },
-          formationDoctorale: { id: 1, titre: 'Informatique et Systèmes', ced: { id: 1, titre: 'Sciences et Techniques' } },
-          laboratoire: { id: 1, nom: 'LIIAN' }
-        }
+    try {
+      const result = await directeurPoleService.getAllCandidats();
+      if (result.results) {
+        setCandidatures(result.results as Postuler[]);
+      } else {
+        throw new Error('No data received');
       }
-    ];
-    setCandidatures(mockCandidatures);
+    } catch (error) {
+      console.error('Error fetching candidatures:', error);
+      toast({
+        title: "Erreur",
+        description: "Erreur lors du chargement des candidatures",
+        variant: "destructive"
+      });
+    }
   };
 
   const fetchCommissions = async () => {
-    // Mock data for commissions
-    const mockCommissions: Commission[] = [
-      {
-        id: 1,
-        dateCommission: '2024-03-15',
-        heure: '14:00',
-        lieu: 'Salle de conférence A - FST Fès',
-        valider: true,
-        sujets: [
-          { id: 1, titre: 'Intelligence Artificielle appliquée aux systèmes embarqués' },
-          { id: 2, titre: 'Analyse des données massives pour la prédiction climatique' }
-        ],
-        participants: [
-          { id: 1, nom: 'El Amrani', prenom: 'Karim' },
-          { id: 2, nom: 'Alaoui', prenom: 'Fatima' },
-          { id: 3, nom: 'Bennani', prenom: 'Hassan' }
-        ],
-        labo: 'LIIAN'
-      },
-      {
-        id: 2,
-        dateCommission: '2024-03-20',
-        heure: '10:00',
-        lieu: 'Amphithéâtre B - FST Fès',
-        valider: false,
-        sujets: [
-          { id: 3, titre: 'Cybersécurité des réseaux IoT industriels' }
-        ],
-        participants: [
-          { id: 4, nom: 'Rachidi', prenom: 'Mohammed' },
-          { id: 5, nom: 'Tazi', prenom: 'Nadia' }
-        ],
-        labo: 'LSIA'
+    try {
+      const result = await directeurPoleService.getAllCommissions();
+      if (result.results) {
+        setCommissions(result.results as Commission[]);
+      } else {
+        throw new Error('No data received');
       }
-    ];
-    setCommissions(mockCommissions);
+    } catch (error) {
+      console.error('Error fetching commissions:', error);
+      toast({
+        title: "Erreur",
+        description: "Erreur lors du chargement des commissions",
+        variant: "destructive"
+      });
+    }
   };
 
   const fetchCalendrier = async () => {
-    // Mock data for calendrier
-    const mockCalendrier: CalendrierItem[] = [
-      {
-        id: 1,
-        action: 'Dépôt des sujets de thèse',
-        dateDebut: '2024-01-01',
-        dateFin: '2024-02-15'
-      },
-      {
-        id: 2,
-        action: 'Candidature des doctorants',
-        dateDebut: '2024-02-16',
-        dateFin: '2024-03-31'
-      },
-      {
-        id: 3,
-        action: 'Présélection des candidats',
-        dateDebut: '2024-04-01',
-        dateFin: '2024-04-15'
-      },
-      {
-        id: 4,
-        action: 'Entretiens oraux',
-        dateDebut: '2024-04-20',
-        dateFin: '2024-05-10'
-      },
-      {
-        id: 5,
-        action: 'Publication des résultats',
-        dateDebut: '2024-05-15',
-        dateFin: '2024-05-20'
-      }
-    ];
-    setCalendrier(mockCalendrier);
+    try {
+      const data = await directeurPoleService.getCalendrier();
+      setCalendrier(data);
+    } catch (error) {
+      console.error('Error fetching calendrier:', error);
+      toast({
+        title: "Erreur",
+        description: "Erreur lors du chargement du calendrier",
+        variant: "destructive"
+      });
+    }
   };
 
   useEffect(() => {
+    // Fetch logged-in director data from localStorage or auth context
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        const userData = JSON.parse(storedUser);
+        const directorData = {
+          nom: userData.nom || userData.lastName || 'Directeur',
+          prenom: userData.prenom || userData.firstName || 'Pôle',
+          email: userData.email || 'directeur@pole.ma'
+        };
+        setLoggedDirector(directorData);
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        // Fallback to a default director
+        setLoggedDirector({
+          nom: 'Directeur',
+          prenom: 'Pôle',
+          email: 'directeur@pole.ma'
+        });
+      }
+    } else {
+      // If no user data in localStorage, use a default director
+      setLoggedDirector({
+        nom: 'Directeur',
+        prenom: 'Pôle',
+        email: 'directeur@pole.ma'
+      });
+    }
+
     const fetchAllData = async () => {
       setLoading(true);
       try {
@@ -327,13 +184,15 @@ const DirecteurPole: React.FC = () => {
   const handlePublierSujets = async () => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await directeurPoleService.publierSujets();
       toast({
         title: "Succès",
-        description: "Les sujets ont été publiés avec succès",
+        description: response.message || "Les sujets ont été publiés avec succès",
       });
+      // Refresh sujets after publishing
+      await fetchSujets();
     } catch (error) {
+      console.error('Error publishing sujets:', error);
       toast({
         title: "Erreur",
         description: "Erreur lors de la publication des sujets",
@@ -347,12 +206,13 @@ const DirecteurPole: React.FC = () => {
   const handlePublierListePrincipale = async () => {
     setLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await directeurPoleService.publierListePrincipale();
       toast({
         title: "Succès",
-        description: "La liste principale a été publiée avec succès",
+        description: response.message || "La liste principale a été publiée avec succès",
       });
     } catch (error) {
+      console.error('Error publishing liste principale:', error);
       toast({
         title: "Erreur",
         description: "Erreur lors de la publication de la liste principale",
@@ -366,12 +226,13 @@ const DirecteurPole: React.FC = () => {
   const handlePublierListeAttente = async () => {
     setLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await directeurPoleService.publierListeAttente();
       toast({
         title: "Succès",
-        description: "La liste d'attente a été publiée avec succès",
+        description: response.message || "La liste d'attente a été publiée avec succès",
       });
     } catch (error) {
+      console.error('Error publishing liste attente:', error);
       toast({
         title: "Erreur",
         description: "Erreur lors de la publication de la liste d'attente",
@@ -385,7 +246,9 @@ const DirecteurPole: React.FC = () => {
   const handleConfirmerCalendrier = async (id: number, dateDebut: string, dateFin: string) => {
     setLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Note: The API doesn't seem to have an update endpoint for calendrier
+      // You may need to add this endpoint to your backend
+      // For now, we'll just update the local state
       setCalendrier(prev => prev.map(item =>
         item.id === id ? { ...item, dateDebut, dateFin } : item
       ));
@@ -394,6 +257,7 @@ const DirecteurPole: React.FC = () => {
         description: "Les dates ont été mises à jour avec succès",
       });
     } catch (error) {
+      console.error('Error updating calendrier:', error);
       toast({
         title: "Erreur",
         description: "Erreur lors de la mise à jour des dates",
@@ -404,6 +268,18 @@ const DirecteurPole: React.FC = () => {
     }
   };
 
+  const handleLogout = () => {
+    // Clear authentication tokens from localStorage
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    
+    // Redirect to login page
+    window.location.href = '/login';
+    
+    // Close the confirmation dialog
+    setShowLogoutConfirmation(false);
+  };
+
   const handleViewCandidatureDetails = (candidature: Postuler) => {
     setSelectedCandidature(candidature);
     setIsCandidateDetailDialogOpen(true);
@@ -412,11 +288,10 @@ const DirecteurPole: React.FC = () => {
   // Filter functions
   const filteredSujets = sujets.filter(sujet => {
     const matchesSujet = sujet.titre.toLowerCase().includes(sujetFilter.toLowerCase());
-    const matchesLabo = sujet.laboratoire.nom.toLowerCase().includes(laboFilter.toLowerCase());
     const matchesFormation = sujet.formationDoctorale.titre.toLowerCase().includes(formationFilter.toLowerCase());
     const matchesSearch = sujet.titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       sujet.professeur.nom.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSujet && matchesLabo && matchesFormation && (searchTerm === '' || matchesSearch);
+    return matchesSujet && matchesFormation && (searchTerm === '' || matchesSearch);
   });
 
   const filteredCandidatures = candidatures.filter(candidature =>
@@ -428,42 +303,66 @@ const DirecteurPole: React.FC = () => {
 
   const filteredCommissions = commissions.filter(commission =>
     commission.lieu.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    commission.labo.toLowerCase().includes(searchTerm.toLowerCase())
+    commission.labo.toString().toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const getPublicationBadge = (publier: boolean) => {
-    return publier ? (
-      <Badge className="bg-green-500">Publié</Badge>
-    ) : (
-      <Badge className="bg-gray-500">Non publié</Badge>
-    );
-  };
-
-  const getStatusBadge = (valider: boolean) => {
-    return valider ? (
-      <Badge className="bg-green-500">Validé</Badge>
-    ) : (
-      <Badge className="bg-yellow-500">En attente</Badge>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header Section */}
-      <section className="py-12 lg:py-16 bg-gradient-to-r from-primary/5 to-secondary/5">
+      <section className="py-6 lg:py-8 bg-gradient-to-r from-primary/10 to-secondary/10 border-b border-border">
         <div className="container mx-auto px-4 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="max-w-4xl mx-auto text-center"
-          >
-            <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-4">
-              Espace Directeur de Pôle
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Gestion et supervision des sujets, candidats, commissions et calendrier du pôle doctoral
-            </p>
-          </motion.div>
+          <div className="flex flex-col lg:flex-row justify-between items-center gap-6 max-w-6xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center lg:text-left order-2 lg:order-1"
+            >
+              <h1 className="text-2xl md:text-3xl font-serif font-bold text-foreground">
+                Espace Directeur de Pôle
+              </h1>
+              <p className="text-sm md:text-base text-muted-foreground mt-1">
+                Gestion et supervision des sujets, candidats, commissions et calendrier du pôle doctoral
+              </p>
+            </motion.div>
+            
+            {/* Logout button with director's name */}
+            {loggedDirector && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg p-3 shadow-sm border border-border min-w-[200px] order-1 lg:order-2"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="bg-primary/10 p-2 rounded-full">
+                    <GraduationCap className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-xs text-muted-foreground">Connecté en tant que</p>
+                    <p className="font-medium text-sm">{loggedDirector.prenom} {loggedDirector.nom}</p>
+                  </div>
+                </div>
+                <AlertDialog open={showLogoutConfirmation} onOpenChange={setShowLogoutConfirmation}>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" size="icon" className="rounded-full h-9 w-9">
+                      <LogOut className="w-4 h-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Confirmer la déconnexion</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Êtes-vous sûr de vouloir vous déconnecter ? Vous devrez vous reconnecter pour accéder à votre espace.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Annuler</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleLogout}>Déconnexion</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </motion.div>
+            )}
+          </div>
         </div>
       </section>
 
@@ -572,255 +471,30 @@ const DirecteurPole: React.FC = () => {
 
             {!loading && (
               <div className="overflow-x-auto">
-                {/* Sujets Tab */}
-                {activeTab === 'sujets' && (
-                  <DataTable>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Titre | Sujet | Thème</TableHead>
-                        <TableHead>Directeur</TableHead>
-                        <TableHead>Co-Directeur</TableHead>
-                        <TableHead>Laboratoire</TableHead>
-                        <TableHead>Formation Doctorale</TableHead>
-                        <TableHead>CED</TableHead>
-                        <TableHead>Statut</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredSujets.map((sujet) => (
-                        <TableRow key={sujet.id}>
-                          <TableCell className="font-medium max-w-xs truncate">{sujet.titre}</TableCell>
-                          <TableCell>{sujet.professeur.prenom} {sujet.professeur.nom}</TableCell>
-                          <TableCell>
-                            {sujet.coDirecteur
-                              ? `${sujet.coDirecteur.prenom} ${sujet.coDirecteur.nom}`
-                              : '-'}
-                          </TableCell>
-                          <TableCell>{sujet.laboratoire.nom}</TableCell>
-                          <TableCell>{sujet.formationDoctorale.titre}</TableCell>
-                          <TableCell>{sujet.formationDoctorale.ced.titre}</TableCell>
-                          <TableCell>{getPublicationBadge(sujet.publier)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </DataTable>
-                )}
-
-                {/* Candidats Tab */}
+                {activeTab === 'sujets' && <SujetsTab sujets={filteredSujets} />}
                 {activeTab === 'candidats' && (
-                  <DataTable>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Titre Sujet</TableHead>
-                        <TableHead>Directeur</TableHead>
-                        <TableHead>Co-Directeur</TableHead>
-                        <TableHead>CNE</TableHead>
-                        <TableHead>Nom</TableHead>
-                        <TableHead>Prénom</TableHead>
-                        <TableHead>Laboratoire</TableHead>
-                        <TableHead>Formation Doctorale</TableHead>
-                        <TableHead>CED</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredCandidatures.map((candidature) => (
-                        <TableRow key={candidature.id}>
-                          <TableCell className="font-medium max-w-xs truncate">{candidature.sujet.titre}</TableCell>
-                          <TableCell>{candidature.sujet.professeur.nom} {candidature.sujet.professeur.prenom}</TableCell>
-                          <TableCell>
-                            {candidature.sujet.coDirecteur
-                              ? `${candidature.sujet.coDirecteur.nom} ${candidature.sujet.coDirecteur.prenom}`
-                              : '-'}
-                          </TableCell>
-                          <TableCell>{candidature.candidat.cne}</TableCell>
-                          <TableCell>{candidature.candidat.nom}</TableCell>
-                          <TableCell>{candidature.candidat.prenom}</TableCell>
-                          <TableCell>{candidature.sujet.laboratoire.nom}</TableCell>
-                          <TableCell>{candidature.sujet.formationDoctorale.titre}</TableCell>
-                          <TableCell>{candidature.sujet.formationDoctorale.ced.titre}</TableCell>
-                          <TableCell>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewCandidatureDetails(candidature)}
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </DataTable>
+                  <CandidatsTab
+                    candidatures={filteredCandidatures}
+                    onViewDetails={handleViewCandidatureDetails}
+                  />
                 )}
-
-                {/* Commissions Tab */}
-                {activeTab === 'commissions' && (
-                  <DataTable>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Heure</TableHead>
-                        <TableHead>Lieu</TableHead>
-                        <TableHead>Sujets</TableHead>
-                        <TableHead>Membres</TableHead>
-                        <TableHead>Laboratoire</TableHead>
-                        <TableHead>Statut</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredCommissions.map((commission) => (
-                        <TableRow key={commission.id}>
-                          <TableCell>{new Date(commission.dateCommission).toLocaleDateString('fr-FR')}</TableCell>
-                          <TableCell>{commission.heure}</TableCell>
-                          <TableCell>{commission.lieu}</TableCell>
-                          <TableCell>
-                            <ul className="list-disc list-inside text-sm">
-                              {commission.sujets.map((sujet) => (
-                                <li key={sujet.id} className="truncate max-w-xs">{sujet.titre}</li>
-                              ))}
-                            </ul>
-                          </TableCell>
-                          <TableCell>
-                            <ul className="list-disc list-inside text-sm">
-                              {commission.participants.map((participant) => (
-                                <li key={participant.id}>{participant.nom} {participant.prenom}</li>
-                              ))}
-                            </ul>
-                          </TableCell>
-                          <TableCell>{commission.labo}</TableCell>
-                          <TableCell>{getStatusBadge(commission.valider)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </DataTable>
-                )}
-
-                {/* Calendrier Tab */}
+                {activeTab === 'commissions' && <CommissionsTab commissions={filteredCommissions} />}
                 {activeTab === 'calendrier' && (
-                  <div className="space-y-4">
-                    <Accordion type="single" collapsible className="w-full">
-                      {calendrier.map((item) => (
-                        <AccordionItem key={item.id} value={`item-${item.id}`}>
-                          <AccordionTrigger className="text-left">
-                            {item.action}
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            <CalendrierForm
-                              item={item}
-                              onConfirm={handleConfirmerCalendrier}
-                              loading={loading}
-                            />
-                          </AccordionContent>
-                        </AccordionItem>
-                      ))}
-                    </Accordion>
-                  </div>
+                  <CalendrierTab
+                    calendrier={calendrier}
+                    onConfirm={handleConfirmerCalendrier}
+                    loading={loading}
+                  />
                 )}
-
-                {/* Communiquer Tab */}
                 {activeTab === 'communiquer' && (
-                  <div className="space-y-4">
-                    <Accordion type="single" collapsible className="w-full" defaultValue="sujets">
-                      <AccordionItem value="sujets">
-                        <AccordionTrigger>Sujets</AccordionTrigger>
-                        <AccordionContent>
-                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-muted/50 rounded-lg">
-                            <div>
-                              <h5 className="font-semibold">Publier les sujets</h5>
-                              <p className="text-sm text-muted-foreground">
-                                Rendre visibles les sujets de recherche aux candidats
-                              </p>
-                            </div>
-                            <Button onClick={handlePublierSujets} disabled={loading}>
-                              <Send className="w-4 h-4 mr-2" />
-                              Confirmer
-                            </Button>
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-
-                      <AccordionItem value="liste-principale">
-                        <AccordionTrigger>Liste Principale</AccordionTrigger>
-                        <AccordionContent>
-                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-muted/50 rounded-lg">
-                            <div>
-                              <h5 className="font-semibold">Liste Principale</h5>
-                              <p className="text-sm text-muted-foreground">
-                                Publier et télécharger la liste principale des candidats admis
-                              </p>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button variant="outline">
-                                <Download className="w-4 h-4 mr-2" />
-                                Télécharger
-                              </Button>
-                              <Button onClick={handlePublierListePrincipale} disabled={loading}>
-                                <Send className="w-4 h-4 mr-2" />
-                                Publier
-                              </Button>
-                            </div>
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-
-                      <AccordionItem value="liste-attente">
-                        <AccordionTrigger>Liste D'attente</AccordionTrigger>
-                        <AccordionContent>
-                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-muted/50 rounded-lg">
-                            <div>
-                              <h5 className="font-semibold">Liste D'attente</h5>
-                              <p className="text-sm text-muted-foreground">
-                                Publier et télécharger la liste d'attente des candidats
-                              </p>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button variant="outline">
-                                <Download className="w-4 h-4 mr-2" />
-                                Télécharger
-                              </Button>
-                              <Button onClick={handlePublierListeAttente} disabled={loading}>
-                                <Send className="w-4 h-4 mr-2" />
-                                Publier
-                              </Button>
-                            </div>
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    </Accordion>
-                  </div>
+                  <CommuniquerTab
+                    onPublierSujets={handlePublierSujets}
+                    onPublierListePrincipale={handlePublierListePrincipale}
+                    onPublierListeAttente={handlePublierListeAttente}
+                    loading={loading}
+                  />
                 )}
-
-                {/* Inscription Tab */}
-                {activeTab === 'inscription' && (
-                  <div className="text-center py-12">
-                    <ClipboardList className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-xl font-semibold mb-2">Gestion des Inscriptions</h3>
-                    <p className="text-muted-foreground max-w-md mx-auto">
-                      Cette section permettra de gérer les inscriptions des doctorants.
-                      Fonctionnalité en cours de développement.
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Empty states */}
-            {!loading && activeTab === 'sujets' && filteredSujets.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                Aucun sujet trouvé
-              </div>
-            )}
-
-            {!loading && activeTab === 'candidats' && filteredCandidatures.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                Aucun candidat trouvé
-              </div>
-            )}
-
-            {!loading && activeTab === 'commissions' && filteredCommissions.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                Aucune commission trouvée
+                {activeTab === 'inscription' && <InscriptionTab />}
               </div>
             )}
           </CardContent>
@@ -858,127 +532,11 @@ const DirecteurPole: React.FC = () => {
       </div>
 
       {/* Candidature Details Dialog */}
-      <Dialog open={isCandidateDetailDialogOpen} onOpenChange={setIsCandidateDetailDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">Détails de la Candidature</DialogTitle>
-          </DialogHeader>
-          {selectedCandidature && (
-            <div className="space-y-6 py-4">
-              {/* Candidate Info */}
-              <div className="bg-gray-50 p-6 rounded-lg">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
-                  Informations du Candidat
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">CNE</Label>
-                    <div className="text-base font-semibold">{selectedCandidature.candidat.cne}</div>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Nom complet</Label>
-                    <div className="text-base">{selectedCandidature.candidat.nom} {selectedCandidature.candidat.prenom}</div>
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label className="text-sm font-medium text-gray-700">Email</Label>
-                    <div className="text-base">{selectedCandidature.candidat.email}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Subject Info */}
-              <div className="bg-blue-50 p-6 rounded-lg">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
-                  Sujet de Recherche
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Titre du sujet</Label>
-                    <div className="text-base bg-white p-3 rounded border">{selectedCandidature.sujet.titre}</div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Directeur de Thèse</Label>
-                      <div className="text-base bg-white p-3 rounded border">
-                        {selectedCandidature.sujet.professeur.prenom} {selectedCandidature.sujet.professeur.nom}
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Co-Directeur</Label>
-                      <div className="text-base bg-white p-3 rounded border">
-                        {selectedCandidature.sujet.coDirecteur
-                          ? `${selectedCandidature.sujet.coDirecteur.prenom} ${selectedCandidature.sujet.coDirecteur.nom}`
-                          : 'Non assigné'}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Laboratoire</Label>
-                      <div className="text-base bg-white p-3 rounded border">
-                        {selectedCandidature.sujet.laboratoire.nom}
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Formation Doctorale</Label>
-                      <div className="text-base bg-white p-3 rounded border">
-                        {selectedCandidature.sujet.formationDoctorale.titre}
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">CED</Label>
-                    <div className="text-base bg-white p-3 rounded border">
-                      {selectedCandidature.sujet.formationDoctorale.ced.titre}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          <div className="flex justify-end pt-4">
-            <Button onClick={() => setIsCandidateDetailDialogOpen(false)}>Fermer</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-};
-
-// Calendrier Form Component
-interface CalendrierFormProps {
-  item: CalendrierItem;
-  onConfirm: (id: number, dateDebut: string, dateFin: string) => void;
-  loading: boolean;
-}
-
-const CalendrierForm: React.FC<CalendrierFormProps> = ({ item, onConfirm, loading }) => {
-  const [dateDebut, setDateDebut] = useState(item.dateDebut);
-  const [dateFin, setDateFin] = useState(item.dateFin);
-
-  return (
-    <div className="flex flex-wrap items-center gap-4 p-4 bg-muted/50 rounded-lg">
-      <span className="text-sm font-medium">De</span>
-      <Input
-        type="date"
-        value={dateDebut}
-        onChange={(e) => setDateDebut(e.target.value)}
-        className="w-auto"
+      <CandidatureDetailsDialog
+        open={isCandidateDetailDialogOpen}
+        onOpenChange={setIsCandidateDetailDialogOpen}
+        candidature={selectedCandidature}
       />
-      <span className="text-sm font-medium">à</span>
-      <Input
-        type="date"
-        value={dateFin}
-        onChange={(e) => setDateFin(e.target.value)}
-        className="w-auto"
-      />
-      <Button
-        onClick={() => onConfirm(item.id, dateDebut, dateFin)}
-        disabled={loading}
-      >
-        <CheckCircle className="w-4 h-4 mr-2" />
-        Confirmer
-      </Button>
     </div>
   );
 };

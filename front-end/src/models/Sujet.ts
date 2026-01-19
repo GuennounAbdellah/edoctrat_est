@@ -10,6 +10,6 @@ export interface Sujet {
     titre: string;
     description: string;
     formationDoctorale: FormationDoctorale;
-    publier: boolean;
+    publier: boolean;   
 
 }
