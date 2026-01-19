@@ -5,6 +5,7 @@ import com.tppartdeux.edoctorat.dto.professeur.*;
 
 import com.tppartdeux.edoctorat.model.professeur.*;
 import com.tppartdeux.edoctorat.service.DtoMapperService;
+import com.tppartdeux.edoctorat.service.candidat.PostulerService;
 import com.tppartdeux.edoctorat.service.professeur.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -24,7 +25,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
-@CrossOrigin(origins = {"http://localhost:4200", "http://localhost:3000"})
+@CrossOrigin(origins = { "http://localhost:8081", "http://localhost:3000" })
 public class DirecteurLaboController {
 
     private final SujetService sujetService;
@@ -33,24 +34,41 @@ public class DirecteurLaboController {
     private final LaboratoireService laboratoireService;
     private final ExaminerService examinerService;
     private final DtoMapperService dtoMapper;
+    private final PostulerService postulerService;
 
+    @GetMapping("/labo-candidats-joined/")
+    public ResponseEntity<List<PostulerJoinedResponse>> getCandidatsJoined(
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) Integer offset) {
+        try {
+            List<PostulerJoinedResponse> candidatsJoined = postulerService.getCandidatsJoinedData();
+
+            int start = offset != null ? offset : 0;
+            int end = limit != null ? Math.min(start + limit, candidatsJoined.size()) : candidatsJoined.size();
+
+            List<PostulerJoinedResponse> responses = candidatsJoined.subList(start, end);
+            System.out.println("Responses: " + responses);
+            return ResponseEntity.ok(responses); // <-- tableau direct
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
+    }
     // GET /api/sujetslabo/ - Get sujets for labo
     @GetMapping("/sujetslabo/")
     public ResponseEntity<ResultDTO<SujetResponse>> getSujetsLabo(
             @RequestParam(required = false) Integer limit,
-            @RequestParam(required = false) Integer offset,
-            @RequestHeader("Authorization") String authHeader) {
+            @RequestParam(required = false) Integer offset) {
         try {
             // For now return all sujets - in production filter by labo
             List<Sujet> sujets = sujetService.findAll();
-            
+
             int start = offset != null ? offset : 0;
             int end = limit != null ? Math.min(start + limit, sujets.size()) : sujets.size();
-            
+
             List<SujetResponse> responses = sujets.subList(start, end).stream()
                     .map(dtoMapper::toSujetResponse)
                     .collect(Collectors.toList());
-            
+
             return ResponseEntity.ok(ResultDTO.of(responses, sujets.size(), null, null));
         } catch (Exception e) {
             return ResponseEntity.status(401).build();
@@ -60,7 +78,6 @@ public class DirecteurLaboController {
     // POST /api/sujetslabo/ - Create sujet for labo
     @PostMapping("/sujetslabo/")
     public ResponseEntity<SujetResponse> createSujetLabo(
-            @RequestHeader("Authorization") String authHeader,
             @RequestBody Sujet sujet) {
         try {
             Sujet created = sujetService.create(sujet);
@@ -69,7 +86,20 @@ public class DirecteurLaboController {
             return ResponseEntity.status(400).build();
         }
     }
-
+    
+    // GET /api/sujetslabo/{id}/ - Get sujet for labo
+    @GetMapping("/sujetslabo/{id}/")
+    public ResponseEntity<SujetResponse> getSujetLabo(@PathVariable Long id) {
+        try {
+            Sujet sujet = sujetService.findById(id).orElse(null);
+            if (sujet == null) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(dtoMapper.toSujetResponse(sujet));
+        } catch (Exception e) {
+            return ResponseEntity.status(401).build();
+        }
+    }
     // PUT /api/sujetslabo/{id}/ - Update sujet for labo
     @PutMapping("/sujetslabo/{id}/")
     public ResponseEntity<SujetResponse> updateSujetLabo(
@@ -100,14 +130,14 @@ public class DirecteurLaboController {
             @RequestParam(required = false) Integer limit,
             @RequestParam(required = false) Integer offset) {
         List<Commission> commissions = commissionService.findAll();
-        
+
         int start = offset != null ? offset : 0;
         int end = limit != null ? Math.min(start + limit, commissions.size()) : commissions.size();
-        
+
         List<CommissionResponse> responses = commissions.subList(start, end).stream()
                 .map(c -> dtoMapper.toCommissionResponse(c, Collections.emptyList(), Collections.emptyList()))
                 .collect(Collectors.toList());
-        
+
         return ResponseEntity.ok(ResultDTO.of(responses, commissions.size(), null, null));
     }
 
@@ -129,7 +159,7 @@ public class DirecteurLaboController {
                 Long laboId = Long.valueOf(body.get("labo").toString());
                 laboratoireService.findById(laboId).ifPresent(commission::setLabo);
             }
-            
+
             Commission created = commissionService.create(commission);
             return new ResponseEntity<>(
                     dtoMapper.toCommissionResponse(created, Collections.emptyList(), Collections.emptyList()),
@@ -149,7 +179,7 @@ public class DirecteurLaboController {
             if (existing == null) {
                 return ResponseEntity.notFound().build();
             }
-            
+
             if (body.containsKey("dateCommission")) {
                 existing.setDateCommission(LocalDate.parse(body.get("dateCommission").toString()));
             }
@@ -159,9 +189,10 @@ public class DirecteurLaboController {
             if (body.containsKey("lieu")) {
                 existing.setLieu((String) body.get("lieu"));
             }
-            
+
             Commission updated = commissionService.update(id, existing);
-            return ResponseEntity.ok(dtoMapper.toCommissionResponse(updated, Collections.emptyList(), Collections.emptyList()));
+            return ResponseEntity
+                    .ok(dtoMapper.toCommissionResponse(updated, Collections.emptyList(), Collections.emptyList()));
         } catch (Exception e) {
             return ResponseEntity.notFound().build();
         }
@@ -184,14 +215,14 @@ public class DirecteurLaboController {
             @RequestParam(required = false) Integer limit,
             @RequestParam(required = false) Integer offset) {
         List<Professeur> professeurs = professeurService.findAll();
-        
+
         int start = offset != null ? offset : 0;
         int end = limit != null ? Math.min(start + limit, professeurs.size()) : professeurs.size();
-        
+
         List<ProfesseurResponse> responses = professeurs.subList(start, end).stream()
                 .map(dtoMapper::toProfesseurResponse)
                 .collect(Collectors.toList());
-        
+
         return ResponseEntity.ok(ResultDTO.of(responses, professeurs.size(), null, null));
     }
 
@@ -201,14 +232,14 @@ public class DirecteurLaboController {
             @RequestParam(required = false) Integer limit,
             @RequestParam(required = false) Integer offset) {
         List<Examiner> examiners = examinerService.findAll();
-        
+
         int start = offset != null ? offset : 0;
         int end = limit != null ? Math.min(start + limit, examiners.size()) : examiners.size();
-        
+
         List<ExaminerResponse> responses = examiners.subList(start, end).stream()
                 .map(dtoMapper::toExaminerResponse)
                 .collect(Collectors.toList());
-        
+
         return ResponseEntity.ok(ResultDTO.of(responses, examiners.size(), null, null));
     }
 
@@ -219,12 +250,12 @@ public class DirecteurLaboController {
         if (sujet == null) {
             return ResponseEntity.notFound().build();
         }
-        
+
         List<Examiner> examiners = examinerService.findBySujet(sujet);
         List<ExaminerResponse> responses = examiners.stream()
                 .map(dtoMapper::toExaminerResponse)
                 .collect(Collectors.toList());
-        
+
         return ResponseEntity.ok(ResultDTO.of(responses));
     }
 
@@ -238,14 +269,14 @@ public class DirecteurLaboController {
             if (examiner == null) {
                 return ResponseEntity.notFound().build();
             }
-            
+
             if (body.containsKey("valider")) {
                 examiner.setValider((Boolean) body.get("valider"));
             }
             if (body.containsKey("decision")) {
                 examiner.setDecision((String) body.get("decision"));
             }
-            
+
             Examiner updated = examinerService.update(id, examiner);
             return ResponseEntity.ok(dtoMapper.toExaminerResponse(updated));
         } catch (Exception e) {

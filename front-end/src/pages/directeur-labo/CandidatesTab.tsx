@@ -38,19 +38,25 @@ const CandidatesTab: React.FC<CandidatesTabProps> = ({
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const response = await DirecteurLaboService.getJoinedCandidats();
-                setJoinedData(response.data || []);
-                setLoading(false);
-            } catch (error) {
-                console.error('Error fetching joined data:', error);
-                setLoading(false);
-            }
-        };
-        
-        fetchData();
+    const fetchData = async () => {
+        try {
+        const response = await DirecteurLaboService.getJoinedCandidats();
+        console.log("getCandidats response:", response);
+
+        setJoinedData(response || []);
+
+        } catch (error) {
+        console.error("Error fetching joined data:", error);
+        setJoinedData([]);
+        } finally {
+        setLoading(false);
+        }
+    };
+
+    fetchData();
     }, []);
+
+
 
     const filteredData = joinedData.filter(data =>
         data.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||

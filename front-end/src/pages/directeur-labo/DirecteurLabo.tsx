@@ -68,7 +68,7 @@ const DirecteurLaboInterface: React.FC = () => {
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [formations, setFormations] = useState<FormationDoctorale[]>([]);
   const [results, setResults] = useState<Examiner[]>([]);
-
+ 
   // Dialog states
   const [isSujetDialogOpen, setIsSujetDialogOpen] = useState(false);
   const [isCommissionDialogOpen, setIsCommissionDialogOpen] = useState(false);
@@ -140,6 +140,7 @@ const DirecteurLaboInterface: React.FC = () => {
       await fetchCommissions();
       await fetchFormations();
       await fetchResults();
+      await fetchJoinedCandidats(); // Add this call
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -148,40 +149,7 @@ const DirecteurLaboInterface: React.FC = () => {
   };
 
   const fetchCandidats = async () => {
-    try {
-      const response = await DirecteurLaboService.getAllCandidats();
-      // Transform backend response to frontend Candidat model
-      const transformedCandidats: Candidat[] = response.results.map(item => ({
-        id: item.id,
-        cne: item.cne,
-        pays: item.pays,
-        nom: item.nom,
-        prenom: item.prenom,
-        email: item.email,
-        cin: item.cin,
-        nomCandidatAr: item.nomCandidatAr,
-        prenomCandidatAr: item.prenomCandidatAr,
-        adresse: item.adresse,
-        adresseAr: item.adresseAr,
-        sexe: item.sexe,
-        villeDeNaissance: item.villeDeNaissance,
-        villeDeNaissanceAr: item.villeDeNaissanceAr,
-        ville: item.ville,
-        dateDeNaissance: item.dateDeNaissance,
-        typeDeHandiCape: item.typeDeHandiCape,
-        academie: item.academie,
-        telCandidat: item.telCandidat,
-        pathCv: item.pathCv,
-        pathPhoto: item.pathPhoto,
-        etatDossier: item.etatDossier,
-        situation_familiale: item.situation_familiale,
-        fonctionnaire: item.fonctionnaire
-      }));
-      setCandidats(transformedCandidats);
-    } catch (error) {
-      console.error('Error fetching candidats:', error);
-      setCandidats([]); // Empty array instead of mock data
-    }
+    
   };
 
   const fetchSujets = async () => {
@@ -197,7 +165,8 @@ const DirecteurLaboInterface: React.FC = () => {
         publier: item.publier,
         pathFile: item.pathFile,
         professeur: item.professeur,
-        formationDoctorale: item.formationDoctorale
+        formationDoctorale: item.formationDoctorale,
+        coDirecteur: item.coDirecteur || null  // Handle coDirecteur field from backend response
       }));
       setSujets(transformedSujets);
     } catch (error) {
@@ -207,65 +176,19 @@ const DirecteurLaboInterface: React.FC = () => {
   };
 
   const fetchCommissions = async () => {
-    try {
-      const response = await DirecteurLaboService.getAllCommissions();
-      // Transform backend response to frontend Commission model
-      const transformedCommissions: Commission[] = response.results.map(item => ({
-        id: item.id,
-        dateCommission: item.dateCommission,
-        heure: item.heure,
-        valider: item.valider,
-        lieu: item.lieu,
-        labo: item.labo,
-        participants: item.participants,
-        sujets: item.sujets
-      }));
-      setCommissions(transformedCommissions);
-    } catch (error) {
-      console.error('Error fetching commissions:', error);
-      setCommissions([]); // Empty array instead of mock data
-    }
+    
   };
 
   const fetchFormations = async () => {
-    try {
-      const response = await DirecteurLaboService.getLaboProfesseurs();
-      // Transform backend response to frontend FormationDoctorale model
-      // Note: We're using labo professeurs endpoint as placeholder
-      // In a real implementation, there should be a dedicated formations endpoint
-      const transformedFormations: FormationDoctorale[] = [
-        { id: 1, nom: 'Informatique', description: 'Formation en informatique' },
-        { id: 2, nom: 'Mathématiques', description: 'Formation en mathématiques' },
-        { id: 3, nom: 'Physique', description: 'Formation en physique' },
-        { id: 4, nom: 'Chimie', description: 'Formation en chimie' }
-      ];
-      setFormations(transformedFormations);
-    } catch (error) {
-      console.error('Error fetching formations:', error);
-      setFormations([]); // Empty array instead of mock data
-    }
+    
   };
 
   const fetchResults = async () => {
-    try {
-      const response = await DirecteurLaboService.getLaboCandidats();
-      // Transform backend response to frontend Examiner model
-      const transformedResults: Examiner[] = response.results.map(item => ({
-        id: item.id,
-        sujet: item.sujet,
-        cne: item.cne,
-        noteDossier: item.noteDossier,
-        noteEntretien: item.noteEntretien,
-        decision: item.decision,
-        commission: item.commission,
-        candidat: item.candidat,
-        publier: item.publier
-      }));
-      setResults(transformedResults);
-    } catch (error) {
-      console.error('Error fetching results:', error);
-      setResults([]); // Empty array instead of mock data
-    }
+    
+  };
+
+  const fetchJoinedCandidats = async () => {
+    
   };
 
   const handleCreateSujet = async () => {
@@ -278,7 +201,8 @@ const DirecteurLaboInterface: React.FC = () => {
         motsCles: '',
         dateDepot: new Date().toISOString().split('T')[0],
         publier: false,
-        pathFile: ''
+        pathFile: '',
+        coDirecteur: sujetFormData.coDirecteur ? { id: parseInt(sujetFormData.coDirecteur) } as Professeur : null  // Add coDirecteur field
       };
       
       await DirecteurLaboService.createSujet(newSujet);
@@ -555,7 +479,7 @@ const DirecteurLaboInterface: React.FC = () => {
               <div className="overflow-x-auto">
                 {activeTab === 'candidats' && (
                   <CandidatesTab 
-                    candidats={candidats}
+                    // candidats={candidats}
                     searchTerm={searchTerm}
                     onViewCandidateDetails={handleViewCandidateDetails}
                   />
@@ -563,7 +487,6 @@ const DirecteurLaboInterface: React.FC = () => {
 
                 {activeTab === 'sujets' && (
                   <SubjectsTab 
-                    sujets={sujets}
                     searchTerm={searchTerm}
                     onAddSubject={() => setIsSujetDialogOpen(true)}
                   />
@@ -579,8 +502,9 @@ const DirecteurLaboInterface: React.FC = () => {
                 )}
 
                 {activeTab === 'preselection' && (
-                  <PreselectionTab 
-                  />
+                  <PreselectionTab onSendInvitations={function (): void {
+                    throw new Error('Function not implemented.');
+                  } }                  />
                 )}
 
                 {activeTab === 'resultats' && (
@@ -599,11 +523,6 @@ const DirecteurLaboInterface: React.FC = () => {
               </div>
             )}
 
-            {!loading && activeTab === 'candidats' && filteredCandidats.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                Aucun candidat trouvé
-              </div>
-            )}
 
             {!loading && activeTab === 'sujets' && filteredSujets.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
@@ -663,7 +582,7 @@ const DirecteurLaboInterface: React.FC = () => {
                 <SelectContent>
                   {formations.map(formation => (
                     <SelectItem key={formation.id} value={String(formation.id)}>
-                      {formation.nom}
+                      {formation.titre}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -819,7 +738,15 @@ const DirecteurLaboInterface: React.FC = () => {
                   <div>
                     <Label className="block text-sm font-medium text-gray-700 mb-1">Sujet de Recherche</Label>
                     <div className="text-base text-gray-900 bg-white p-3 rounded border">
-                      {sujets.find(s => s.id === 1)?.titre || 'Aucun sujet attribué'}
+                      {/* {selectedCandidate ? (
+                        (() => {
+                          // Find the joined data for this candidate
+                          const joinedData = joinedCandidats.find(j => j.cne === selectedCandidate.cne);
+                          return joinedData?.sujetPostule || 'Aucun sujet attribué';
+                        })()
+                      ) : (
+                        'Aucun sujet attribué'
+                      )} */}
                     </div>
                   </div>
                   
@@ -827,13 +754,29 @@ const DirecteurLaboInterface: React.FC = () => {
                     <div>
                       <Label className="block text-sm font-medium text-gray-700 mb-1">Directeur de Thèse</Label>
                       <div className="text-base text-gray-900 bg-white p-3 rounded border">
-                        {sujets.find(s => s.id === 1)?.professeur?.nom || 'Aucun directeur attribué'}
+                        {/* {selectedCandidate ? (
+                          (() => {
+                            // Find the joined data for this candidate
+                            const joinedData = joinedCandidats.find(j => j.cne === selectedCandidate.cne);
+                            return `${joinedData?.directeurNom || ''} ${joinedData?.directeurPrenom || ''}`.trim() || 'Aucun directeur attribué';
+                          })()
+                        ) : (
+                          'Aucun directeur attribué'
+                        )} */}
                       </div>
                     </div>
                     <div>
                       <Label className="block text-sm font-medium text-gray-700 mb-1">Co-Directeur</Label>
                       <div className="text-base text-gray-900 bg-white p-3 rounded border">
-                        {sujets.find(s => s.id === 1)?.professeur?.prenom || 'Aucun co-directeur attribué'}
+                        {/* {selectedCandidate ? (
+                          (() => {
+                            // Find the joined data for this candidate
+                            const joinedData = joinedCandidats.find(j => j.cne === selectedCandidate.cne);
+                            return `${joinedData?.codirecteurNom || ''} ${joinedData?.codirecteurPrenom || ''}`.trim() || 'Aucun co-directeur attribué';
+                          })()
+                        ) : (
+                          'Aucun co-directeur attribué'
+                        )} */}
                       </div>
                     </div>
                   </div>
@@ -841,7 +784,15 @@ const DirecteurLaboInterface: React.FC = () => {
                   <div>
                     <Label className="block text-sm font-medium text-gray-700 mb-1">Formation Doctorale</Label>
                     <div className="text-base text-gray-900 bg-white p-3 rounded border">
-                      {sujets.find(s => s.id === 1)?.formationDoctorale?.nom || 'Aucune formation attribuée'}
+                      {/* {selectedCandidate ? (
+                        (() => {
+                          // Find the joined data for this candidate
+                          const joinedData = joinedCandidats.find(j => j.cne === selectedCandidate.cne);
+                          return joinedData?.formationDoctorale || 'Aucune formation attribuée';
+                        })()
+                      ) : (
+                        'Aucune formation attribuée'
+                      )} */}
                     </div>
                   </div>
                   
@@ -849,23 +800,55 @@ const DirecteurLaboInterface: React.FC = () => {
                     <div>
                       <Label className="block text-sm font-medium text-gray-700 mb-1">Date de Dépôt</Label>
                       <div className="text-base text-gray-900 bg-white p-3 rounded border">
-                        {sujets.find(s => s.id === 1)?.dateDepot || 'Non spécifiée'}
+                        {/* {selectedCandidate ? (
+                          (() => {
+                            // Find the joined data for this candidate
+                            const joinedData = joinedCandidats.find(j => j.cne === selectedCandidate.cne);
+                            return joinedData?.dateDepot || 'Non spécifiée';
+                          })()
+                        ) : (
+                          'Non spécifiée'
+                        )} */}
                       </div>
                     </div>
                     <div>
                       <Label className="block text-sm font-medium text-gray-700 mb-1">Statut Publication</Label>
                       <div>
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                          sujets.find(s => s.id === 1)?.publier ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        {/*<span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                          selectedCandidate ? (
+                            (() => {
+                              // Find the joined data for this candidate
+                              const joinedData = joinedCandidats.find(j => j.cne === selectedCandidate.cne);
+                              return joinedData?.publier ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
+                            })()
+                          ) : (
+                            'bg-gray-100 text-gray-800'
+                          )
                         }`}>
-                          {sujets.find(s => s.id === 1)?.publier ? 'Publié' : 'Non publié'}
-                        </span>
+                          {selectedCandidate ? (
+                            (() => {
+                              // Find the joined data for this candidate
+                              const joinedData = joinedCandidats.find(j => j.cne === selectedCandidate.cne);
+                              return joinedData?.publier ? 'Publié' : 'Non publié';
+                            })()
+                          ) : (
+                            'Non publié'
+                          )}
+                        </span>*/}
                       </div>
                     </div>
                     <div>
                       <Label className="block text-sm font-medium text-gray-700 mb-1">Mots-clés</Label>
                       <div className="text-base text-gray-900 bg-white p-3 rounded border">
-                        {sujets.find(s => s.id === 1)?.motsCles || 'Aucun mot-clé défini'}
+                        {/* {selectedCandidate ? (
+                          (() => {
+                            // Find the joined data for this candidate
+                            const joinedData = joinedCandidats.find(j => j.cne === selectedCandidate.cne);
+                            return joinedData?.motsCles || 'Aucun mot-clé défini';
+                          })()
+                        ) : (
+                          'Aucun mot-clé défini'
+                        )} */}
                       </div>
                     </div>
                   </div>

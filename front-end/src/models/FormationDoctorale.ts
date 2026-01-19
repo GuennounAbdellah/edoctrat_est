@@ -1,12 +1,11 @@
-type CED = {
-    id: number,
-    titre: string
-}
+
+
+import { CED } from './CED';
 
 export interface FormationDoctorale {
 
     id: number;
-    ced: number;
+    ced: CED | number;
     etablissement: number;
     axeDeRecherche: string;
     pathImage: string;
