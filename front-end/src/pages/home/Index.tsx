@@ -142,7 +142,7 @@ const Index = () => {
         </div>
 
         {/* Content */}
-        <div className="relative container mx-auto px-4 lg:px-8 py-20">
+        <div className="relative container mx-auto px-4 lg:px-8 py-0">
           <div className="max-w-3xl">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
