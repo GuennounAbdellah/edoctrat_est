@@ -38,6 +38,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:8080")
 public class CandidatController {
 
     private final CandidatService candidatService;
@@ -446,4 +447,13 @@ public class CandidatController {
         return ResponseEntity.ok(ResultDTO.of(notifications));
     }
 
+    //GET candidat by CNE
+    @GetMapping("/get-candidat-by-cne/{cne}")
+    public ResponseEntity<Candidat> getCandidatByCne(@PathVariable String cne) {
+        Candidat candidat = candidatService.findByCne(cne).orElse(null);
+        if (candidat == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(candidat);
+    }
 }

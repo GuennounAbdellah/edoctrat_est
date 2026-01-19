@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ChevronDown, GraduationCap, LogIn } from 'lucide-react';
+import { Menu, X, ChevronDown, GraduationCap, LogIn, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -9,6 +9,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { jwtDecode } from 'jwt-decode';
+import { authApi } from '@/api/authService';
+
+interface JwtPayload {
+  exp: number;
+  iat: number;
+  authorities?: string[];
+  roles?: string[];
+  groups?: string[];
+  [key: string]: any;
+}
 
 const navItems = [
   { label: 'Accueil', href: '/' },
@@ -27,9 +38,92 @@ const navItems = [
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkAuthStatus = () => {
+      const token = localStorage.getItem('accessToken');
+      if (token) {
+        try {
+          const decoded = jwtDecode<JwtPayload>(token);
+          const currentTime = Date.now() / 1000;
+          
+          if (decoded.exp > currentTime) {
+            setIsLoggedIn(true);
+            
+            // Extract user role from token
+            let roles: string[] = [];
+            if (decoded.roles && Array.isArray(decoded.roles)) {
+              roles = decoded.roles;
+            } else if (decoded.authorities && Array.isArray(decoded.authorities)) {
+              roles = decoded.authorities.map((auth: string) => auth.replace('ROLE_', '').toLowerCase());
+            } else if (decoded.groups && Array.isArray(decoded.groups)) {
+              roles = decoded.groups;
+            }
+            
+            if (roles.length > 0) {
+              setUserRole(roles[0].toLowerCase()); // Use first role
+            }
+          } else {
+            setIsLoggedIn(false);
+            setUserRole(null);
+          }
+        } catch (error) {
+          console.error('Error decoding token:', error);
+          setIsLoggedIn(false);
+          setUserRole(null);
+        }
+      } else {
+        setIsLoggedIn(false);
+        setUserRole(null);
+      }
+    };
+
+    checkAuthStatus();
+
+    // Listen for storage changes to handle logout from other tabs
+    const handleStorageChange = () => {
+      checkAuthStatus();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await authApi.logout();
+      setIsLoggedIn(false);
+      setUserRole(null);
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Even if backend logout fails, clear local storage and redirect
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      setIsLoggedIn(false);
+      setUserRole(null);
+      navigate('/');
+    }
+  };
 
   const isActive = (href: string) => location.pathname === href;
+
+  // Determine dashboard link based on user role
+  const getDashboardLink = () => {
+    if (!userRole) return '/login';
+    
+    if (userRole.includes('directeur_ced')) return '/ced-dashboard';
+    if (userRole.includes('directeur_labo')) return '/labo-dashboard';
+    if (userRole.includes('scolarite')) return '/scolarite-dashboard';
+    if (userRole.includes('directeur_pole')) return '/pole-dashboard';
+    // Directeur roles also have professeur privileges, but we direct them to their specific dashboard first
+    if (userRole.includes('professeur')) return '/professeur-dashboard';
+    
+    return '/candidat-dashboard'; // default
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50">
@@ -87,17 +181,36 @@ const Header = () => {
 
           {/* Actions */}
           <div className="flex items-center gap-3">
-            <Link to="/login" className="hidden sm:block">
-              <Button variant="outline" size="default">
-                <LogIn className="w-4 h-4" />
-                Se connecter
-              </Button>
-            </Link>
-            <Link to="/candidat/pre-inscription">
-              <Button variant="gold" size="default">
-                Candidater
-              </Button>
-            </Link>
+            {isLoggedIn ? (
+              <div className="flex items-center gap-3">
+                <Link to={getDashboardLink()}>
+                  <Button variant="outline" size="default">
+                    Tableau de bord
+                  </Button>
+                </Link>
+                <button 
+                  onClick={handleLogout}
+                  className="p-2 rounded-lg hover:bg-muted transition-colors"
+                  aria-label="Déconnexion"
+                >
+                  <LogOut className="w-5 h-5" />
+                </button>
+              </div>
+            ) : (
+              <>
+                <Link to="/login" className="hidden sm:block">
+                  <Button variant="outline" size="default">
+                    <LogIn className="w-4 h-4" />
+                    Se connecter
+                  </Button>
+                </Link>
+                <Link to="/candidat/pre-inscription">
+                  <Button variant="gold" size="default">
+                    Candidater
+                  </Button>
+                </Link>
+              </>
+            )}
 
             {/* Mobile Menu Toggle */}
             <button

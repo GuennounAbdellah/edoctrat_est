@@ -15,7 +15,7 @@ import { Examiner } from '@/models/Examiner';
 interface ResultsTabProps {
     results: Examiner[];
     searchTerm: string;
-    onViewCandidateDetails: (candidateId: number) => void;
+    onViewCandidateDetails: (candidateData: any) => Promise<void>;
 }
 
 const ResultsTab: React.FC<ResultsTabProps> = ({ results, searchTerm, onViewCandidateDetails }) => {
@@ -57,13 +57,28 @@ const ResultsTab: React.FC<ResultsTabProps> = ({ results, searchTerm, onViewCand
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {/* {filteredResults.map((result) => (
+                    {filteredResults.map((result) => (
                         <TableRow key={result.id}>
                             <TableCell>
                                 <Button 
                                     variant="link" 
                                     className="p-0 h-auto font-normal text-blue-600 hover:text-blue-800"
-                                    onClick={() => result.candidat?.id && onViewCandidateDetails(result.candidat.id)}
+                                    onClick={async () => {
+                                        // Create a joined data object similar to what CandidatesTab uses
+                                        const candidateData = {
+                                            id: result.candidat?.id || 0,
+                                            cne: result.cne,
+                                            nom: result.candidat?.nom || '',
+                                            prenom: result.candidat?.prenom || '',
+                                            sujetPostule: result.sujet?.titre || '',
+                                            directeurNom: '', // Not available in this context
+                                            directeurPrenom: '',
+                                            codirecteurNom: '',
+                                            codirecteurPrenom: '',
+                                            formationDoctorale: '' // Not available in this context
+                                        };
+                                        await onViewCandidateDetails(candidateData);
+                                    }}
                                 >
                                     {result.cne}
                                 </Button>
@@ -75,7 +90,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({ results, searchTerm, onViewCand
                             <TableCell>{((result.noteDossier + result.noteEntretien) / 2).toFixed(2)}/20</TableCell>
                             <TableCell>{getDecisionBadge(result.decision)}</TableCell>
                         </TableRow>
-                    ))} */}
+                    ))}
                 </TableBody>
             </DataTable>
 

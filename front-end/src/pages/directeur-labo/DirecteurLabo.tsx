@@ -41,15 +41,17 @@ import CommissionsTab from './CommissionsTab';
 import ResultsTab from './ResultsTab';
 import PreselectionTab from './PreselectionTab';
 import PvGlobalTab from './PvGlobalTab';
+import Header from '../../components/layout/Header';
 
 // Import models
-import { Candidat } from '@/models/Candidat';
+import { Candidat, JoinedCandidate } from '@/models/Candidat';
 import { Sujet } from '@/models/Sujet';
 import { Commission } from '@/models/Commission';
 import { FormationDoctorale } from '@/models/FormationDoctorale';
 import { Examiner } from '@/models/Examiner';
 import { Professeur } from '@/models/Professeur';
 import { DirecteurLabo } from '@/models/DirecteurLabo';
+import { Diplome } from '@/models/Diplome';
 
 // Import services
 import { DirecteurLaboService } from '@/api/directeurLaboService';
@@ -73,7 +75,8 @@ const DirecteurLaboInterface: React.FC = () => {
   const [isSujetDialogOpen, setIsSujetDialogOpen] = useState(false);
   const [isCommissionDialogOpen, setIsCommissionDialogOpen] = useState(false);
   const [isCandidateDetailDialogOpen, setIsCandidateDetailDialogOpen] = useState(false);
-  const [selectedCandidate, setSelectedCandidate] = useState<Candidat | null>(null);
+  const [selectedCandidate, setSelectedCandidate] = useState<JoinedCandidate | null>(null);
+  const [candidateDiplomes, setCandidateDiplomes] = useState<Diplome[]>([]);
   
   // Logout confirmation state
   const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
@@ -149,7 +152,41 @@ const DirecteurLaboInterface: React.FC = () => {
   };
 
   const fetchCandidats = async () => {
-    
+    try {
+      const response = await DirecteurLaboService.getJoinedCandidats();
+      console.log('Fetched joined candidats:', response);
+      // Transform the response to match Candidat interface
+      const transformedCandidats: Candidat[] = response.map(item => ({
+        id: item.candidat.id,
+        cne: item.candidat.cne,
+        nom: item.candidat.nom,
+        prenom: item.candidat.prenom,
+        email: item.candidat.email,
+        cin: item.candidat.cin,
+        pays: item.candidat.pays,
+        nomCandidatAr: item.candidat.nomCandidatAr,
+        prenomCandidatAr: item.candidat.prenomCandidatAr,
+        adresse: item.candidat.adresse,
+        adresseAr: item.candidat.adresseAr,
+        sexe: item.candidat.sexe,
+        villeDeNaissance: item.candidat.villeDeNaissance,
+        villeDeNaissanceAr: item.candidat.villeDeNaissanceAr,
+        ville: item.candidat.ville,
+        dateDeNaissance: item.candidat.dateDeNaissance,
+        typeDeHandiCape: item.candidat.typeDeHandiCape,
+        academie: item.candidat.academie,
+        telCandidat: item.candidat.telCandidat,
+        pathCv: item.candidat.pathCv,
+        pathPhoto: item.candidat.pathPhoto,
+        etatDossier: item.candidat.etatDossier,
+        situation_familiale: item.candidat.situation_familiale,
+        fonctionnaire: item.candidat.fonctionnaire
+      }));
+      setCandidats(transformedCandidats);
+    } catch (error) {
+      console.error('Error fetching candidats:', error);
+      setCandidats([]);
+    }
   };
 
   const fetchSujets = async () => {
@@ -176,19 +213,51 @@ const DirecteurLaboInterface: React.FC = () => {
   };
 
   const fetchCommissions = async () => {
-    
+    // try {
+    //   const response = await DirecteurLaboService.getAllCommissions();
+    //   console.log('Fetched commissions:', response);
+    //   setCommissions(response.results || []);
+    // } catch (error) {
+    //   console.error('Error fetching commissions:', error);
+    //   setCommissions([]);
+    // }
   };
 
+
   const fetchFormations = async () => {
-    
+    // try {
+    //   const response = await DirecteurLaboService.getFormations();
+    //   console.log('Fetched formations:', response);
+    //   // The getFormations method returns an array directly
+    //   setFormations(response || []);
+    // } catch (error) {
+    //   console.error('Error fetching formations:', error);
+    //   setFormations([]);
+    // }
   };
 
   const fetchResults = async () => {
-    
+    // try {
+    //   // Assuming there's an API to get examiner results
+    //   // Using the labo candidat service as it likely contains results
+    //   const response = await DirecteurLaboService.getLaboCandidats();
+    //   console.log('Fetched results:', response);
+    //   setResults(response.results || []);
+    // } catch (error) {
+    //   console.error('Error fetching results:', error);
+    //   setResults([]);
+    // }
   };
 
   const fetchJoinedCandidats = async () => {
-    
+    try {
+      const response = await DirecteurLaboService.getJoinedCandidats();
+      console.log('Fetched joined candidats:', response);
+      // We don't need to store this separately since it's used in the CandidatesTab
+      // Just log the data to confirm it's working
+    } catch (error) {
+      console.error('Error fetching joined candidats:', error);
+    }
   };
 
   const handleCreateSujet = async () => {
@@ -265,12 +334,66 @@ const DirecteurLaboInterface: React.FC = () => {
     setShowLogoutConfirmation(false);
   };
 
-  const handleViewCandidateDetails = (candidateId: number) => {
-    const candidate = candidats.find(c => c.id === candidateId);
-    if (candidate) {
-      setSelectedCandidate(candidate);
-      setIsCandidateDetailDialogOpen(true);
+  const handleViewCandidateDetails = async (candidateData: any) => {
+    // Fetch complete candidate data from the database
+    let completeCandidate;
+    try {
+      completeCandidate = await DirecteurLaboService.getCandidateByCNE(candidateData.cne);
+    } catch (error) {
+      console.error('Error fetching complete candidate data:', error);
+      // Use fallback candidate data if API call fails
+      completeCandidate = {
+        id: candidateData.id,
+        cne: candidateData.cne,
+        nom: candidateData.nom,
+        prenom: candidateData.prenom,
+        // Add other fields with default values since we don't have the full candidat data
+        pays: '',
+        email: '',
+        cin: '',
+        nomCandidatAr: undefined,
+        prenomCandidatAr: undefined,
+        adresse: '',
+        adresseAr: undefined,
+        sexe: '',
+        villeDeNaissance: '',
+        villeDeNaissanceAr: undefined,
+        ville: '',
+        dateDeNaissance: '',
+        typeDeHandiCape: '',
+        academie: undefined,
+        telCandidat: '',
+        pathCv: undefined,
+        pathPhoto: undefined,
+        etatDossier: undefined,
+        situation_familiale: undefined,
+        fonctionnaire: undefined
+      };
     }
+    
+    // Combine the complete candidate data with the joined data
+    const combinedCandidate: JoinedCandidate = {
+      ...completeCandidate,
+      sujetPostule: candidateData.sujetPostule,
+      directeurNom: candidateData.directeurNom,
+      directeurPrenom: candidateData.directeurPrenom,
+      codirecteurNom: candidateData.codirecteurNom || '',
+      codirecteurPrenom: candidateData.codirecteurPrenom || '',
+      formationDoctorale: candidateData.formationDoctorale,
+    };
+    
+    setSelectedCandidate(combinedCandidate);
+    
+    // Fetch diplomes for this candidate
+    try {
+      const diplomes = await DirecteurLaboService.getCandidateDiplomes(candidateData.cne);
+      setCandidateDiplomes(diplomes);
+    } catch (error) {
+      console.error('Error fetching candidate diplomes:', error);
+      setCandidateDiplomes([]); // Set empty array if there's an error
+    }
+    
+    setIsCandidateDetailDialogOpen(true);
   };
 
   // Filter functions
@@ -326,65 +449,26 @@ const DirecteurLaboInterface: React.FC = () => {
   };
 
   return (
+    
     <div className="min-h-screen bg-background">
-      {/* Header Section */}
-      <section className="py-6 lg:py-8 bg-gradient-to-r from-primary/10 to-secondary/10 border-b border-border">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="flex flex-col lg:flex-row justify-between items-center gap-6 max-w-6xl mx-auto">
+      <Header />
+        {/* Header Section */}
+        <section className="py-8 lg:py-16 bg-gradient-to-r from-primary/5 to-secondary/5 mt-20">
+          <div className="container mx-auto px-4 lg:px-8">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-center lg:text-left order-2 lg:order-1"
+              className="max-w-4xl mx-auto text-center"
             >
-              <h1 className="text-2xl md:text-3xl font-serif font-bold text-foreground">
+              <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-4">
                 Espace Directeur de Laboratoire
               </h1>
-              <p className="text-sm md:text-base text-muted-foreground mt-1">
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                 Gestion et supervision des candidats, sujets et commissions
               </p>
             </motion.div>
-            
-            {/* Logout button with director's name */}
-            {loggedDirector && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg p-3 shadow-sm border border-border min-w-[200px] order-1 lg:order-2"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="bg-primary/10 p-2 rounded-full">
-                    <GraduationCap className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-xs text-muted-foreground">Connecté en tant que</p>
-                    <p className="font-medium text-sm">{loggedDirector.prenom} {loggedDirector.nom}</p>
-                  </div>
-                </div>
-                <AlertDialog open={showLogoutConfirmation} onOpenChange={setShowLogoutConfirmation}>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="outline" size="icon" className="rounded-full h-9 w-9">
-                      <LogOut className="w-4 h-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Confirmer la déconnexion</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Êtes-vous sûr de vouloir vous déconnecter ? Vous devrez vous reconnecter pour accéder à votre espace.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Annuler</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleLogout}>Déconnexion</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </motion.div>
-            )}
           </div>
-        </div>
-      </section>
-
+        </section>
       <div className="container mx-auto px-4 lg:px-8 py-8">
         <Card className="mb-8">
           <CardHeader>
@@ -731,130 +815,6 @@ const DirecteurLaboInterface: React.FC = () => {
                 </div>
               </div>
               
-              {/* Section sujet de recherche */}
-              <div className="bg-blue-50 p-6 rounded-lg">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">Sujet de Recherche</h3>
-                <div className="space-y-6">
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Sujet de Recherche</Label>
-                    <div className="text-base text-gray-900 bg-white p-3 rounded border">
-                      {/* {selectedCandidate ? (
-                        (() => {
-                          // Find the joined data for this candidate
-                          const joinedData = joinedCandidats.find(j => j.cne === selectedCandidate.cne);
-                          return joinedData?.sujetPostule || 'Aucun sujet attribué';
-                        })()
-                      ) : (
-                        'Aucun sujet attribué'
-                      )} */}
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <Label className="block text-sm font-medium text-gray-700 mb-1">Directeur de Thèse</Label>
-                      <div className="text-base text-gray-900 bg-white p-3 rounded border">
-                        {/* {selectedCandidate ? (
-                          (() => {
-                            // Find the joined data for this candidate
-                            const joinedData = joinedCandidats.find(j => j.cne === selectedCandidate.cne);
-                            return `${joinedData?.directeurNom || ''} ${joinedData?.directeurPrenom || ''}`.trim() || 'Aucun directeur attribué';
-                          })()
-                        ) : (
-                          'Aucun directeur attribué'
-                        )} */}
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="block text-sm font-medium text-gray-700 mb-1">Co-Directeur</Label>
-                      <div className="text-base text-gray-900 bg-white p-3 rounded border">
-                        {/* {selectedCandidate ? (
-                          (() => {
-                            // Find the joined data for this candidate
-                            const joinedData = joinedCandidats.find(j => j.cne === selectedCandidate.cne);
-                            return `${joinedData?.codirecteurNom || ''} ${joinedData?.codirecteurPrenom || ''}`.trim() || 'Aucun co-directeur attribué';
-                          })()
-                        ) : (
-                          'Aucun co-directeur attribué'
-                        )} */}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Formation Doctorale</Label>
-                    <div className="text-base text-gray-900 bg-white p-3 rounded border">
-                      {/* {selectedCandidate ? (
-                        (() => {
-                          // Find the joined data for this candidate
-                          const joinedData = joinedCandidats.find(j => j.cne === selectedCandidate.cne);
-                          return joinedData?.formationDoctorale || 'Aucune formation attribuée';
-                        })()
-                      ) : (
-                        'Aucune formation attribuée'
-                      )} */}
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                      <Label className="block text-sm font-medium text-gray-700 mb-1">Date de Dépôt</Label>
-                      <div className="text-base text-gray-900 bg-white p-3 rounded border">
-                        {/* {selectedCandidate ? (
-                          (() => {
-                            // Find the joined data for this candidate
-                            const joinedData = joinedCandidats.find(j => j.cne === selectedCandidate.cne);
-                            return joinedData?.dateDepot || 'Non spécifiée';
-                          })()
-                        ) : (
-                          'Non spécifiée'
-                        )} */}
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="block text-sm font-medium text-gray-700 mb-1">Statut Publication</Label>
-                      <div>
-                        {/*<span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                          selectedCandidate ? (
-                            (() => {
-                              // Find the joined data for this candidate
-                              const joinedData = joinedCandidats.find(j => j.cne === selectedCandidate.cne);
-                              return joinedData?.publier ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
-                            })()
-                          ) : (
-                            'bg-gray-100 text-gray-800'
-                          )
-                        }`}>
-                          {selectedCandidate ? (
-                            (() => {
-                              // Find the joined data for this candidate
-                              const joinedData = joinedCandidats.find(j => j.cne === selectedCandidate.cne);
-                              return joinedData?.publier ? 'Publié' : 'Non publié';
-                            })()
-                          ) : (
-                            'Non publié'
-                          )}
-                        </span>*/}
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="block text-sm font-medium text-gray-700 mb-1">Mots-clés</Label>
-                      <div className="text-base text-gray-900 bg-white p-3 rounded border">
-                        {/* {selectedCandidate ? (
-                          (() => {
-                            // Find the joined data for this candidate
-                            const joinedData = joinedCandidats.find(j => j.cne === selectedCandidate.cne);
-                            return joinedData?.motsCles || 'Aucun mot-clé défini';
-                          })()
-                        ) : (
-                          'Aucun mot-clé défini'
-                        )} */}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
               {/* Section diplômes */}
               <div className="bg-purple-50 p-6 rounded-lg">
                 <h3 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">Diplômes et Formation Antérieure</h3>
@@ -871,20 +831,23 @@ const DirecteurLaboInterface: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        <tr>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Master en Informatique</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Génie Logiciel</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Université Sidi Mohamed Ben Abdellah</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">2022</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">16.5/20</td>
-                        </tr>
-                        <tr>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Licence en Sciences</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Informatique</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Université Sidi Mohamed Ben Abdellah</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">2020</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">15.2/20</td>
-                        </tr>
+                        {candidateDiplomes && candidateDiplomes.length > 0 ? (
+                          candidateDiplomes.map((diplome) => (
+                            <tr key={diplome.id}>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{diplome.intitule}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{diplome.specialite}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{diplome.etablissement}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{diplome.dateCommission ? new Date(diplome.dateCommission).getFullYear() : 'N/A'}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{diplome.moyen_generale ? `${diplome.moyen_generale}/20` : 'N/A'}</td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={5} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                              Aucun diplôme enregistré
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
