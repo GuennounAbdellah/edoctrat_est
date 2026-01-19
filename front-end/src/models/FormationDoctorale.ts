@@ -1,12 +1,13 @@
+
 type CED = {
     id: number,
-    titre: string
+    titre: string,
 }
 
 export interface FormationDoctorale {
 
     id: number;
-    ced: number;
+    ced: CED;
     etablissement: number;
     axeDeRecherche: string;
     pathImage: string;
