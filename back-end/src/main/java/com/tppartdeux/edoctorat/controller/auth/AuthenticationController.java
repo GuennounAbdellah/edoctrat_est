@@ -12,11 +12,15 @@ import com.tppartdeux.edoctorat.dto.auth.TokenRequest;
 import com.tppartdeux.edoctorat.dto.auth.TokenResponse;
 import com.tppartdeux.edoctorat.dto.auth.UserInfoResponse;
 import com.tppartdeux.edoctorat.dto.auth.VerifyTokenRequest;
+import com.tppartdeux.edoctorat.model.auth.User;
 import com.tppartdeux.edoctorat.service.auth.UserService;
 import lombok.RequiredArgsConstructor;
 
 import java.util.Map;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -40,6 +44,17 @@ public class AuthenticationController {
     public ResponseEntity<String> createDirecteurCedUser(@RequestBody LoginRequest request) {
         userService.createDirecteurCedUser(request.getEmail(), request.getPassword());
         return ResponseEntity.ok("Directeur CED user created successfully.");
+    }
+    
+    @PostMapping("/createProfesseur")
+    public ResponseEntity<String> createProfesseurUser(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String password = request.get("password");
+        String firstName = request.getOrDefault("firstName", "Professeur");
+        String lastName = request.getOrDefault("lastName", "Test");
+        
+        userService.createProfesseurUser(email, password, firstName, lastName);
+        return ResponseEntity.ok("Professeur user created successfully.");
     }
 
     // POST /api/login - Unified login endpoint for all actors (JWT token generation)
@@ -72,6 +87,7 @@ public class AuthenticationController {
     @PostMapping("/verify-is-prof/")
     public ResponseEntity<AuthProfResponse> verifyIsProfessor(@RequestBody VerifyTokenRequest request) {
         try {
+            System.out.println("!!!!!!!Received verify-is-prof request for token: " + request.getToken());
             Optional<AuthProfResponse> authProf = userService.verifyProfessor(request.getToken());
             return authProf.map(ResponseEntity::ok)
                     .orElse(ResponseEntity.status(401).build());
@@ -193,6 +209,38 @@ public class AuthenticationController {
             return ResponseEntity.ok().build();
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+    
+    // GET /api/debug-user/{email} - Debug endpoint to check user roles
+    @GetMapping("/debug-user/{email}")
+    public ResponseEntity<?> debugUser(@PathVariable String email) {
+        try {
+            Optional<User> userOpt = userService.findByEmail(email);
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                Map<String, Object> response = new HashMap<>();
+                response.put("email", user.getEmail());
+                response.put("id", user.getId());
+                response.put("isActive", user.getIsActive());
+                
+                List<String> groups = user.getUserGroups().stream()
+                    .filter(ug -> ug.getGroup() != null)
+                    .map(ug -> ug.getGroup().getName())
+                    .collect(Collectors.toList());
+                response.put("groups", groups);
+                
+                // Check if user can use Google OAuth
+                boolean canUseGoogleOAuth = groups.stream()
+                    .anyMatch(group -> !"candidat".equalsIgnoreCase(group));
+                response.put("canUseGoogleOAuth", canUseGoogleOAuth);
+                
+                return ResponseEntity.ok(response);
+            } else {
+                return ResponseEntity.status(404).body(Map.of("error", "User not found"));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
     }
 }
