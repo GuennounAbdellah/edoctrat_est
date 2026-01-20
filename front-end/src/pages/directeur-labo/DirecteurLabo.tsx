@@ -70,6 +70,7 @@ const DirecteurLaboInterface: React.FC = () => {
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [formations, setFormations] = useState<FormationDoctorale[]>([]);
   const [results, setResults] = useState<Examiner[]>([]);
+  const [professeurs, setProfesseurs] = useState<Professeur[]>([]);
  
   // Dialog states
   const [isSujetDialogOpen, setIsSujetDialogOpen] = useState(false);
@@ -133,6 +134,7 @@ const DirecteurLaboInterface: React.FC = () => {
     }
     
     fetchAllData();
+    fetchProfesseurs(); // Fetch professors for dropdowns
   }, []);
 
   const fetchAllData = async () => {
@@ -160,6 +162,11 @@ const DirecteurLaboInterface: React.FC = () => {
       // Extract unique candidates from the joined data
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const uniqueCandidats = response.reduce((acc: Candidat[], item: any) => {
+        // Check if item and candidat exist and have cne
+        if (!item || !item.candidat || !item.candidat.cne) {
+          return acc;
+        }
+        
         // Check if candidate already exists in accumulator
         const exists = acc.some(c => c.cne === item.candidat.cne);
         
@@ -223,7 +230,16 @@ const DirecteurLaboInterface: React.FC = () => {
       setFormations([]);
     }
   };
-
+  const fetchProfesseurs = async () => {
+    try {
+      const response = await DirecteurLaboService.getProfesseurs();
+      console.log('Fetched professeurs:', response);
+      setProfesseurs(response || []);
+    } catch (error) {
+      console.error('Error fetching professeurs:', error);
+      setProfesseurs([]);
+    }
+  };
   const fetchResults = async () => {
     // try {
     //   // Assuming there's an API to get examiner results
@@ -570,7 +586,6 @@ const DirecteurLaboInterface: React.FC = () => {
 
                 {activeTab === 'commissions' && (
                   <CommissionsTab 
-                    commissions={commissions}
                     searchTerm={searchTerm}
                     onCreateCommission={() => setIsCommissionDialogOpen(true)}
                     onValidateCommission={handleValidateCommission}
@@ -628,23 +643,61 @@ const DirecteurLaboInterface: React.FC = () => {
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="directeur" className="text-right">Directeur</Label>
-              <Input 
-                id="directeur" 
+              <Select
                 value={sujetFormData.directeur}
-                onChange={(e) => setSujetFormData({...sujetFormData, directeur: e.target.value})}
-                className="col-span-3" 
-                placeholder="Nom du directeur"
-              />
+                onValueChange={(value) => setSujetFormData({...sujetFormData, directeur: value})}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Sélectionner un directeur" />
+                </SelectTrigger>
+                <SelectContent>
+                {Array.isArray(professeurs?.results) &&
+                  professeurs.results
+                    .filter(
+                      (professeur) =>
+                        String(professeur.id) !== sujetFormData.coDirecteur
+                    )
+                    .map((professeur) => (
+                      <SelectItem
+                        key={professeur.id}
+                        value={String(professeur.id)}
+                      >
+                        {professeur.prenom} {professeur.nom}
+                      </SelectItem>
+                    ))
+                }
+              </SelectContent>
+
+              </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="coDirecteur" className="text-right">Co-directeur</Label>
-              <Input 
-                id="coDirecteur" 
+              <Select
                 value={sujetFormData.coDirecteur}
-                onChange={(e) => setSujetFormData({...sujetFormData, coDirecteur: e.target.value})}
-                className="col-span-3" 
-                placeholder="Nom du co-directeur (optionnel)"
-              />
+                onValueChange={(value) => setSujetFormData({...sujetFormData, coDirecteur: value})}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Sélectionner un co-directeur (optionnel)" />
+                </SelectTrigger>
+                <SelectContent>
+                {Array.isArray(professeurs?.results) &&
+                  professeurs.results
+                    .filter(
+                      (professeur) =>
+                        String(professeur.id) !== sujetFormData.directeur
+                    )
+                    .map((professeur) => (
+                      <SelectItem
+                        key={professeur.id}
+                        value={String(professeur.id)}
+                      >
+                        {professeur.prenom} {professeur.nom}
+                      </SelectItem>
+                    ))
+                }
+              </SelectContent>
+
+              </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="formation" className="text-right">Formation Doctorale</Label>
