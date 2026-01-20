@@ -14,7 +14,7 @@ import Laboratoires from "./pages/home/Laboratoires";
 import Formations from "./pages/home/Formations";
 import Calendrier from "./pages/home/Calendrier";
 import DirecteurCed from "./pages/directeur-ced/DirecteurCed";
-import DirecteurLabo from "./pages/directeur-labo/DirecteurLabo";
+import DirecteurLaboInterface from "./pages/directeur-labo/DirecteurLabo";
 import Scolarite from "./pages/scolarite/Scolarite";
 import Professeur from "./pages/professeur/Prefesseur";
 import Candidat from "./pages/candidat/Candidat";
@@ -42,7 +42,7 @@ const App = () => (
           <Route path="/formations" element={<Formations />} />
           <Route path="/calendrier" element={<Calendrier />} />
           <Route path="/ced-dashboard" element={<DirecteurCed />} />
-          <Route path="/labo-dashboard" element={<DirecteurLabo />} />
+          <Route path="/labo-dashboard" element={<DirecteurLaboInterface />} />
           <Route path="/scolarite-dashboard" element={<Scolarite />} />
           <Route path="/professeur-dashboard" element={<Professeur />} />
           <Route path="/candidat-dashboard" element={<Candidat />} />

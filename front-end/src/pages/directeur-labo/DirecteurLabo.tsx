@@ -53,6 +53,8 @@ import { DirecteurLabo } from '@/models/DirecteurLabo';
 
 // Import services
 import { DirecteurLaboService } from '@/api/directeurLaboService';
+import Layout from '@/components/layout/Layout';
+import Header from '@/components/layout/Header';
 
 const DirecteurLaboInterface: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'candidats' | 'sujets' | 'commissions' | 'preselection' | 'resultats' | 'pv'>('candidats');
@@ -325,214 +327,175 @@ const DirecteurLaboInterface: React.FC = () => {
     );
   };
 
-  return (
+    return (
     <Layout>
       <div className="min-h-screen bg-background">
-      <Header />
-      {/* Header Section */}
-      <section className="py-6 lg:py-8 bg-gradient-to-r from-primary/10 to-secondary/10 border-b border-border">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="flex flex-col lg:flex-row justify-between items-center gap-6 max-w-6xl mx-auto">
+        <Header />
+        {/* Header Section */}
+        <section className="py-8 lg:py-12 bg-gradient-to-r from-primary/5 to-secondary/5">
+          <div className="container mx-auto px-4 lg:px-8">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-center lg:text-left order-2 lg:order-1"
+              className="max-w-4xl mx-auto text-center"
             >
-              <h1 className="text-2xl md:text-3xl font-serif font-bold text-foreground">
+              <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-4">
                 Espace Directeur de Laboratoire
               </h1>
-              <p className="text-sm md:text-base text-muted-foreground mt-1">
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                 Gestion et supervision des candidats, sujets et commissions
               </p>
             </motion.div>
-            
-            {/* Logout button with director's name */}
-            {loggedDirector && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg p-3 shadow-sm border border-border min-w-[200px] order-1 lg:order-2"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="bg-primary/10 p-2 rounded-full">
-                    <GraduationCap className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-xs text-muted-foreground">Connecté en tant que</p>
-                    <p className="font-medium text-sm">{loggedDirector.prenom} {loggedDirector.nom}</p>
-                  </div>
-                </div>
-                <AlertDialog open={showLogoutConfirmation} onOpenChange={setShowLogoutConfirmation}>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="outline" size="icon" className="rounded-full h-9 w-9">
-                      <LogOut className="w-4 h-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Confirmer la déconnexion</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Êtes-vous sûr de vouloir vous déconnecter ? Vous devrez vous reconnecter pour accéder à votre espace.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Annuler</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleLogout}>Déconnexion</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </motion.div>
-            )}
           </div>
-        </div>
-      </section>
+        </section>
 
-      <div className="container mx-auto px-4 lg:px-8 py-8">
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <GraduationCap className="w-6 h-6" />
-              Actions Directeur de Laboratoire
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-              <Button
-                variant={activeTab === 'candidats' ? 'default' : 'outline'}
-                onClick={() => setActiveTab('candidats')}
-                className="flex items-center gap-2"
-              >
-                <Users className="w-4 h-4" />
-                Candidats
-              </Button>
-              <Button
-                variant={activeTab === 'sujets' ? 'default' : 'outline'}
-                onClick={() => setActiveTab('sujets')}
-                className="flex items-center gap-2"
-              >
-                <BookOpen className="w-4 h-4" />
-                Sujets
-              </Button>
-              <Button
-                variant={activeTab === 'commissions' ? 'default' : 'outline'}
-                onClick={() => setActiveTab('commissions')}
-                className="flex items-center gap-2"
-              >
-                <Calendar className="w-4 h-4" />
-                Commissions
-              </Button>
-              <Button
-                variant={activeTab === 'preselection' ? 'default' : 'outline'}
-                onClick={() => setActiveTab('preselection')}
-                className="flex items-center gap-2"
-              >
-                <UserCheck className="w-4 h-4" />
-                Présélection
-              </Button>
-              <Button
-                variant={activeTab === 'resultats' ? 'default' : 'outline'}
-                onClick={() => setActiveTab('resultats')}
-                className="flex items-center gap-2"
-              >
-                <FileText className="w-4 h-4" />
-                Résultats
-              </Button>
-              <Button
-                variant={activeTab === 'pv' ? 'default' : 'outline'}
-                onClick={() => setActiveTab('pv')}
-                className="flex items-center gap-2"
-              >
-                <Download className="w-4 h-4" />
-                PV Global
-              </Button>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Rechercher..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              {activeTab === 'sujets' && (
-                <Button onClick={() => setIsSujetDialogOpen(true)} className="flex items-center gap-2">
-                  <Plus className="w-4 h-4" />
-                  Ajouter un sujet
+        <div className="container mx-auto px-4 lg:px-8 py-8">
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <GraduationCap className="w-6 h-6" />
+                Actions Directeur de Laboratoire
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+                <Button
+                  variant={activeTab === 'candidats' ? 'default' : 'outline'}
+                  onClick={() => setActiveTab('candidats')}
+                  className="flex items-center gap-2"
+                >
+                  <Users className="w-4 h-4" />
+                  Candidats
                 </Button>
-              )}
-              {activeTab === 'commissions' && (
-                <Button onClick={() => setIsCommissionDialogOpen(true)} className="flex items-center gap-2">
-                  <Plus className="w-4 h-4" />
-                  Créer une commission
+                <Button
+                  variant={activeTab === 'sujets' ? 'default' : 'outline'}
+                  onClick={() => setActiveTab('sujets')}
+                  className="flex items-center gap-2"
+                >
+                  <BookOpen className="w-4 h-4" />
+                  Sujets
                 </Button>
-              )}
-            </div>
-
-            {loading && (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <Button
+                  variant={activeTab === 'commissions' ? 'default' : 'outline'}
+                  onClick={() => setActiveTab('commissions')}
+                  className="flex items-center gap-2"
+                >
+                  <Calendar className="w-4 h-4" />
+                  Commissions
+                </Button>
+                <Button
+                  variant={activeTab === 'preselection' ? 'default' : 'outline'}
+                  onClick={() => setActiveTab('preselection')}
+                  className="flex items-center gap-2"
+                >
+                  <UserCheck className="w-4 h-4" />
+                  Présélection
+                </Button>
+                <Button
+                  variant={activeTab === 'resultats' ? 'default' : 'outline'}
+                  onClick={() => setActiveTab('resultats')}
+                  className="flex items-center gap-2"
+                >
+                  <FileText className="w-4 h-4" />
+                  Résultats
+                </Button>
+                <Button
+                  variant={activeTab === 'pv' ? 'default' : 'outline'}
+                  onClick={() => setActiveTab('pv')}
+                  className="flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  PV Global
+                </Button>
               </div>
-            )}
 
-            {!loading && (
-              <div className="overflow-x-auto">
-                {activeTab === 'candidats' && (
-                  <CandidatesTab 
-                    // candidats={candidats}
-                    searchTerm={searchTerm}
-                    onViewCandidateDetails={handleViewCandidateDetails}
+              <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Rechercher..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
                   />
-                )}
-
+                </div>
                 {activeTab === 'sujets' && (
-                  <SubjectsTab 
-                    searchTerm={searchTerm}
-                    onAddSubject={() => setIsSujetDialogOpen(true)}
-                  />
+                  <Button onClick={() => setIsSujetDialogOpen(true)} className="flex items-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    Ajouter un sujet
+                  </Button>
                 )}
-
                 {activeTab === 'commissions' && (
-                  <CommissionsTab 
-                    commissions={commissions}
-                    searchTerm={searchTerm}
-                    onCreateCommission={() => setIsCommissionDialogOpen(true)}
-                    onValidateCommission={handleValidateCommission}
-                  />
-                )}
-
-                {activeTab === 'preselection' && (
-                  <PreselectionTab onSendInvitations={function (): void {
-                    throw new Error('Function not implemented.');
-                  } }                  />
-                )}
-
-                {activeTab === 'resultats' && (
-                  <ResultsTab 
-                    results={results}
-                    searchTerm={searchTerm}
-                    onViewCandidateDetails={handleViewCandidateDetails}
-                  />
-                )}
-
-                {activeTab === 'pv' && (
-                  <PvGlobalTab 
-                    onDownloadPV={handleDownloadPV}
-                  />
+                  <Button onClick={() => setIsCommissionDialogOpen(true)} className="flex items-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    Créer une commission
+                  </Button>
                 )}
               </div>
-            )}
+
+              {loading && (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              )}
+
+              {!loading && (
+                <div className="overflow-x-auto">
+                  {activeTab === 'candidats' && (
+                    <CandidatesTab 
+                      // candidats={candidats}
+                      searchTerm={searchTerm}
+                      onViewCandidateDetails={handleViewCandidateDetails}
+                    />
+                  )}
+
+                  {activeTab === 'sujets' && (
+                    <SubjectsTab 
+                      searchTerm={searchTerm}
+                      onAddSubject={() => setIsSujetDialogOpen(true)}
+                    />
+                  )}
+
+                  {activeTab === 'commissions' && (
+                    <CommissionsTab 
+                      commissions={commissions}
+                      searchTerm={searchTerm}
+                      onCreateCommission={() => setIsCommissionDialogOpen(true)}
+                      onValidateCommission={handleValidateCommission}
+                    />
+                  )}
+
+                  {activeTab === 'preselection' && (
+                    <PreselectionTab onSendInvitations={function (): void {
+                      throw new Error('Function not implemented.');
+                    } }                  />
+                  )}
+
+                  {activeTab === 'resultats' && (
+                    <ResultsTab 
+                      results={results}
+                      searchTerm={searchTerm}
+                      onViewCandidateDetails={handleViewCandidateDetails}
+                    />
+                  )}
+
+                  {activeTab === 'pv' && (
+                    <PvGlobalTab 
+                      onDownloadPV={handleDownloadPV}
+                    />
+                  )}
+                </div>
+              )}
 
 
-            {!loading && activeTab === 'sujets' && filteredSujets.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                Aucun sujet trouvé
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              {!loading && activeTab === 'sujets' && filteredSujets.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  Aucun sujet trouvé
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Dialog pour ajouter un sujet */}
@@ -899,7 +862,6 @@ const DirecteurLaboInterface: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
     </Layout>
   );
 };

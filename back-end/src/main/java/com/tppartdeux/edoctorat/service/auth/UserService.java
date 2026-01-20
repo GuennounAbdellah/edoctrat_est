@@ -49,6 +49,109 @@ public class UserService {
     @Autowired
     private EmailSenderService emailSenderService;
 
+    
+    @Autowired
+    private GoogleOAuthService googleOAuthService;
+
+    /**
+     * Vérifie et authentifie un professeur/directeur via Google OAuth
+     * Seuls les professeurs, directeurs CED, directeurs labo et directeurs pole peuvent utiliser OAuth
+     * Les candidats DOIVENT utiliser email/password
+     */
+    public Optional<AuthProfResponse> verifyProfessor(String googleIdToken) {
+        try {
+            System.out.println("!!!!!!!Verifying Google OAuth token");
+            
+            // Vérifier et décoder le token Google
+            com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = 
+                googleOAuthService.verifyGoogleToken(googleIdToken);
+            
+            // Extraire l'email du token
+            String email = googleOAuthService.getEmailFromPayload(payload);
+            System.out.println("!!!!!!!Email from Google token: " + email);
+            
+            // Vérifier que l'email est vérifié par Google
+            if (!googleOAuthService.isEmailVerified(payload)) {
+                System.err.println("!!!!!!!Email not verified by Google: " + email);
+                throw new RuntimeException("Email not verified by Google");
+            }
+            
+            // SÉCURITÉ: Vérifier que l'utilisateur n'est PAS un candidat
+            // Les candidats ne peuvent PAS utiliser OAuth Google
+            User user = userRepository.findByEmail(email);
+            if (user == null) {
+                System.err.println("!!!!!!!User not found with email: " + email);
+                return Optional.empty();
+            }
+            
+            // Vérifier les groupes de l'utilisateur
+            boolean isCandidat = user.getUserGroups().stream()
+                    .anyMatch(userGroup -> userGroup.getGroup().getName().equalsIgnoreCase("candidat"));
+            
+            if (isCandidat) {
+                System.err.println("!!!!!!!SECURITY: Candidat attempted OAuth login - BLOCKED: " + email);
+                throw new RuntimeException("Candidats cannot use Google OAuth. Please use email/password login.");
+            }
+            
+            // Vérifier que l'utilisateur est un professeur ou directeur
+            boolean isProfesseurOrDirecteur = user.getUserGroups().stream()
+                    .anyMatch(userGroup -> {
+                        String groupName = userGroup.getGroup().getName().toLowerCase();
+                        return groupName.equals("professeur") || 
+                            groupName.equals("directeur_ced") ||
+                            groupName.equals("directeur_labo") ||
+                            groupName.equals("directeur_pole");
+                    });
+            
+            if (!isProfesseurOrDirecteur) {
+                System.err.println("!!!!!!!User is not a professor or director: " + email);
+                return Optional.empty();
+            }
+            
+            // Récupérer les informations du professeur
+            Professeur professeur = professeurRepository.findByUser(user).orElse(null);
+            
+            // Générer les tokens JWT
+            String accessToken = jwtTokenService.generateAccessToken(
+                    user.getEmail(), 
+                    user.getUserGroups().stream()
+                            .map(userGroup -> userGroup.getGroup().getName())
+                            .toList()
+            );
+            String refreshToken = jwtTokenService.generateRefreshToken(user.getEmail());
+            
+            // Préparer la liste des groupes
+            java.util.List<String> userGroups = user.getUserGroups().stream()
+                    .map(g -> g.getGroup().getName())
+                    .toList();
+            
+            // Déterminer le rôle principal
+            String primaryRole = userGroups.isEmpty() ? "professeur" : userGroups.get(0);
+            
+            System.out.println("!!!!!!!Google OAuth login successful for: " + email + ", role: " + primaryRole);
+            
+            // Construire la réponse
+            return Optional.of(AuthProfResponse.builder()
+                .email(user.getEmail())
+                .nom(user.getLastName())
+                .prenom(user.getFirstName())
+                .pathPhoto(professeur != null ? professeur.getPathPhoto() : null)
+                .groups(userGroups)
+                .role(primaryRole)
+                .access(accessToken)
+                .refresh(refreshToken)
+                .grade(professeur != null ? professeur.getGrade() : null)
+                .nombreProposer(professeur != null ? professeur.getNombreProposer() : 0)
+                .nombreEncadrer(professeur != null ? professeur.getNombreEncadrer() : 0)
+                .build());
+                
+        } catch (Exception e) {
+            System.err.println("!!!!!!!Google OAuth verification failed: " + e.getMessage());
+            e.printStackTrace();
+            return Optional.empty();
+        }
+    }
+
     // Unified login for all actor types
     public Optional<TokenResponse> unifiedLogin(String email, String password) {
         System.out.println("!!!!!!!Inside unifiedLogin with email: " + email + " and password: " + password);
@@ -107,63 +210,6 @@ public class UserService {
         return Optional.of(response);
     }
 
-    // Verify professor via Google token (simplified - in production use Google API)
-    public Optional<AuthProfResponse> verifyProfessor(String googleIdToken) {
-        // In production, verify the Google ID token with Google's API
-        // For now, we'll simulate by looking up by email extracted from token
-        // This is a placeholder implementation
-        try {
-            // Simulated: In real implementation, decode Google token to get email
-            String email = extractEmailFromToken(googleIdToken);
-            User user = userRepository.findByEmail(email);
-            if (user == null) {
-                return Optional.empty();
-            }
-            
-            boolean isProfesseur = user.getUserGroups().stream()
-                    .anyMatch(userGroup -> userGroup.getGroup().getName().equalsIgnoreCase("professeur"));
-            if (!isProfesseur) {
-                return Optional.empty();
-            }
-            
-            Professeur professeur = professeurRepository.findByUser(user).orElse(null);
-            
-            String accessToken = jwtTokenService.generateAccessToken(
-                    user.getUsername(), 
-                    user.getUserGroups().stream()
-                            .map(userGroup -> userGroup.getGroup().getName())
-                            .toList()
-            );
-            String refreshToken = jwtTokenService.generateRefreshToken(user.getUsername());
-            
-            java.util.List<String> userGroups = user.getUserGroups().stream()
-                    .map(g -> g.getGroup().getName())
-                    .toList();
-                String primaryRole = userGroups.isEmpty() ? "professeur" : userGroups.get(0);
-                
-                return Optional.of(AuthProfResponse.builder()
-                    .email(user.getEmail())
-                    .nom(user.getLastName())
-                    .prenom(user.getFirstName())
-                    .pathPhoto(professeur != null ? professeur.getPathPhoto() : null)
-                    .groups(userGroups)
-                    .role(primaryRole)
-                    .access(accessToken)
-                    .refresh(refreshToken)
-                    .grade(professeur != null ? professeur.getGrade() : null)
-                    .nombreProposer(professeur != null ? professeur.getNombreProposer() : 0)
-                    .nombreEncadrer(professeur != null ? professeur.getNombreEncadrer() : 0)
-                    .build());
-        } catch (Exception e) {
-            return Optional.empty();
-        }
-    }
-    
-    private String extractEmailFromToken(String token) {
-        // Placeholder: In production, decode JWT or verify with Google
-        // For testing, you could pass email directly
-        return token; // Simplified for development
-    }
 
     // Get user info from JWT token
     public Optional<UserInfoResponse> getUserInfoFromToken(String accessToken, String role) {
