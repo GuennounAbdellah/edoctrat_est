@@ -1,6 +1,7 @@
 package com.tppartdeux.edoctorat.service;
 
 import com.tppartdeux.edoctorat.dto.candidat.AnnexeResponse;
+import com.tppartdeux.edoctorat.dto.candidat.CandidatDTO;
 import com.tppartdeux.edoctorat.dto.candidat.CandidatResponse;
 import com.tppartdeux.edoctorat.dto.candidat.DiplomeResponse;
 import com.tppartdeux.edoctorat.dto.professeur.*;
@@ -45,6 +46,36 @@ public class DtoMapperService {
                 .etatDossier(candidat.getEtatDossier())
                 .situationFamiliale(candidat.getSituationFamiliale())
                 .fonctionnaire(candidat.getFonctionaire() != null ? candidat.getFonctionaire().toString() : null)
+                .build();
+    }
+
+    public CandidatDTO toCandidatDTO(Candidat candidat) {
+        if (candidat == null) return null;
+        return CandidatDTO.builder()
+                .id(candidat.getId())
+                .cne(candidat.getCne())
+                .pays(candidat.getPays() != null ? candidat.getPays().getNom() : null)
+                .nom(candidat.getUser() != null ? candidat.getUser().getLastName() : null)
+                .prenom(candidat.getUser() != null ? candidat.getUser().getFirstName() : null)
+                .email(candidat.getUser() != null ? candidat.getUser().getEmail() : null)
+                .cin(candidat.getCin())
+                .nomCandidatAr(candidat.getNomCandidatAr())
+                .prenomCandidatAr(candidat.getPrenomCandidatAr())
+                .adresse(candidat.getAdresse())
+                .adresseAr(candidat.getAdresseAr())
+                .sexe(candidat.getSexe())
+                .villeDeNaissance(candidat.getVilleDeNaissance())
+                .villeDeNaissanceAr(candidat.getVilleDeNaissanceAr())
+                .ville(candidat.getVille())
+                .dateDeNaissance(candidat.getDateDeNaissance() != null ? candidat.getDateDeNaissance().toString() : null)
+                .typeDeHandiCape(candidat.getTypeDeHandiCape())
+                .academie(candidat.getAcademie())
+                .telCandidat(candidat.getTelCandidat())
+                .pathCv(candidat.getPathCv())
+                .pathPhoto(candidat.getPathPhoto())
+                .etatDossier(candidat.getEtatDossier())
+                .situationFamiliale(candidat.getSituationFamiliale())
+                .fonctionaire(candidat.getFonctionaire() != null ? candidat.getFonctionaire().toString() : null)
                 .build();
     }
 
