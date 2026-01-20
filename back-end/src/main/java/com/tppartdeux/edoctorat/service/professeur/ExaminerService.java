@@ -1,5 +1,6 @@
 package com.tppartdeux.edoctorat.service.professeur;
 
+import com.tppartdeux.edoctorat.dto.professeur.PostulerJoinedResponse;
 import com.tppartdeux.edoctorat.model.professeur.Examiner;
 import com.tppartdeux.edoctorat.model.candidat.Candidat;
 import com.tppartdeux.edoctorat.model.professeur.Commission;
@@ -55,6 +56,16 @@ public class ExaminerService {
 
     public List<Examiner> findByValider(Boolean valider) {
         return examinerRepository.findByValider(valider);
+    }
+
+    // Method to get all examiners which includes candidat and sujet information
+    public List<Examiner> findAllWithCandidatsAndSujets() {
+        return examinerRepository.findAll();
+    }
+
+    // Method to get postuler joined data with all related information
+    public List<PostulerJoinedResponse> findAllPostulerJoinedData() {
+        return examinerRepository.findPostulerJoinedData();
     }
 
     public Optional<Examiner> findByCandidatAndSujet(Candidat candidat, Sujet sujet) {

@@ -27,7 +27,7 @@ interface PostulerJoinedResponse {
 
 interface CandidatesTabProps {
     searchTerm: string;
-    onViewCandidateDetails: (candidateId: number) => void;
+    onViewCandidateDetails: (candidateData: PostulerJoinedResponse) => Promise<void>;
 }
 
 const CandidatesTab: React.FC<CandidatesTabProps> = ({
@@ -97,7 +97,9 @@ const CandidatesTab: React.FC<CandidatesTabProps> = ({
                                 <Button
                                     variant="link"
                                     className="p-0 h-auto font-normal text-blue-600 hover:text-blue-800"
-                                    onClick={() => onViewCandidateDetails(data.id)}
+                                    onClick={async () => {
+                                        await onViewCandidateDetails(data);
+                                    }}
                                 >
                                     {data.cne}
                                 </Button>

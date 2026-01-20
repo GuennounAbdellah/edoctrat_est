@@ -230,7 +230,7 @@ const SubjectsTab: React.FC<SubjectsTabProps> = ({
   onClick={(e) => e.stopPropagation()}
 >
   <div className="flex gap-2">
-    <Button
+    {/* <Button
       variant="default"
       size="sm"
       onClick={(e) => {
@@ -241,7 +241,7 @@ const SubjectsTab: React.FC<SubjectsTabProps> = ({
     >
       <Edit className="w-4 h-4 mr-1" />
       Edit
-    </Button>
+    </Button> */}
 
     <Button
       variant="destructive"
