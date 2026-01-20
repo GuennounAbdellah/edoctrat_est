@@ -41,8 +41,6 @@ const CandidatesTab: React.FC<CandidatesTabProps> = ({
     const fetchData = async () => {
         try {
         const response = await DirecteurLaboService.getJoinedCandidats();
-        console.log("getCandidats response:", response);
-
         setJoinedData(response || []);
 
         } catch (error) {
