@@ -614,4 +614,39 @@ public class UserService {
         
         System.out.println("Professeur user created with email: " + email);
     }
+    
+    public void createCandidatUser(String email, String password, String firstName, String lastName) {
+        if (userRepository.existsByEmail(email)) {
+            System.out.println("Candidat user already exists with email: " + email);
+            return;
+        }
+        
+        User user = User.builder()
+                .username(email)
+                .email(email)
+                .password(passwordEncoder.encode(password))
+                .firstName(firstName)
+                .lastName(lastName)
+                .isActive(true)  // Active by default for testing
+                .isStaff(false)
+                .isSuperuser(false)
+                .dateJoined(LocalDateTime.now())
+                .build();
+        userRepository.save(user);
+        
+        // Assign candidat group to the user
+        Group candidatGroup = groupRepository.findByName("candidat")
+                .orElseGet(() -> {
+                    Group newGroup = Group.builder().name("candidat").build();
+                    return groupRepository.save(newGroup);
+                });
+        
+        UserGroups userGroup = UserGroups.builder()
+                .user(user)
+                .group(candidatGroup)
+                .build();
+        userGroupRepository.save(userGroup);
+        
+        System.out.println("Candidat user created with email: " + email);
+    }
 }

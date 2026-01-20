@@ -56,6 +56,17 @@ public class AuthenticationController {
         userService.createProfesseurUser(email, password, firstName, lastName);
         return ResponseEntity.ok("Professeur user created successfully.");
     }
+    
+    @PostMapping("/createCandidat")
+    public ResponseEntity<String> createCandidatUser(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String password = request.get("password");
+        String firstName = request.getOrDefault("firstName", "Candidat");
+        String lastName = request.getOrDefault("lastName", "Test");
+        
+        userService.createCandidatUser(email, password, firstName, lastName);
+        return ResponseEntity.ok("Candidat user created successfully.");
+    }
 
     // POST /api/login - Unified login endpoint for all actors (JWT token generation)
     @PostMapping("/login")

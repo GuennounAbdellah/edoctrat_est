@@ -62,7 +62,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/login", "/api/register/**", "/api/verify-token/**",
                                 "/api/verify-email/**", "/api/resend-verification/**", "/api/request-password-reset/**",
-                                "/api/perform-password-reset/**", "/api/verify-is-prof/**", "/api/createProfesseur", "/api/actuator/health", "/api/debug-user/**")
+                                "/api/perform-password-reset/**", "/api/verify-is-prof/**", "/api/createProfesseur", "/api/createCandidat", "/api/createDirecteurCed", "/api/exempleUsers", "/api/actuator/health", "/api/debug-user/**")
                         .permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
