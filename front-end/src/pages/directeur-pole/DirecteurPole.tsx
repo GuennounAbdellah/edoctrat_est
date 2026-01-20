@@ -81,6 +81,7 @@ const DirecteurPole: React.FC = () => {
       const result = await directeurPoleService.getAllCandidats();
       if (result.results) {
         setCandidatures(result.results as Postuler[]);
+        console.log('Candidatures fetched:', result.results);
       } else {
         throw new Error('No data received');
       }

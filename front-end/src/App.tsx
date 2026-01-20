@@ -1,6 +1,6 @@
 import { ToastProvider, ToastViewport } from "@/components/ui/toast";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/home/Index";
 import Login from "./pages/auth/Login";
 import PreInscription from "./pages/auth/PreInscription";
@@ -17,7 +17,15 @@ import DirecteurLabo from "./pages/directeur-labo/DirecteurLabo";
 import Scolarite from "./pages/scolarite/Scolarite";
 import Professeur from "./pages/professeur/Prefesseur";
 import Candidat from "./pages/candidat/Candidat";
-import DirecteurPole from "./pages/directeur-pole/DirecteurPole";
+import DirecteurPoleLayout from "./pages/directeur-pole/DirecteurPoleLayout";
+import {
+  SujetsPage,
+  CandidatsPage,
+  CommissionsPage,
+  CalendrierPage,
+  CommuniquerPage,
+  InscriptionPage
+} from "./pages/directeur-pole/pages";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,7 +51,18 @@ const App = () => (
           <Route path="/scolarite-dashboard" element={<Scolarite />} />
           <Route path="/professeur-dashboard" element={<Professeur />} />
           <Route path="/candidat-dashboard" element={<Candidat />} />
-          <Route path="/pole-dashboard" element={<DirecteurPole />} />
+          
+          {/* Directeur Pole nested routes */}
+          <Route path="/pole-dashboard" element={<DirecteurPoleLayout />}>
+            <Route index element={<Navigate to="sujets" replace />} />
+            <Route path="sujets" element={<SujetsPage />} />
+            <Route path="candidats" element={<CandidatsPage />} />
+            <Route path="commissions" element={<CommissionsPage />} />
+            <Route path="calendrier" element={<CalendrierPage />} />
+            <Route path="communiquer" element={<CommuniquerPage />} />
+            <Route path="inscription" element={<InscriptionPage />} />
+          </Route>
+          
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

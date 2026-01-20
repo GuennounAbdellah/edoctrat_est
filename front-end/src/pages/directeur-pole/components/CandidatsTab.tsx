@@ -56,7 +56,7 @@ export const CandidatsTab: React.FC<CandidatsTabProps> = ({ candidatures, onView
             <TableCell>{candidature.candidat.nom}</TableCell>
             <TableCell>{candidature.candidat.prenom}</TableCell>
             <TableCell>{candidature.sujet.formationDoctorale.titre}</TableCell>
-            <TableCell>{candidature.sujet.formationDoctorale.ced.titre}</TableCell>
+            <TableCell>{candidature.sujet.formationDoctorale.ced?.titre ?? '-'}</TableCell>
             <TableCell>
               <Button
                 variant="outline"
@@ -152,7 +152,7 @@ export const CandidatureDetailsDialog: React.FC<CandidatureDetailsDialogProps> =
               <div>
                 <Label className="text-sm font-medium text-gray-700">CED</Label>
                 <div className="text-base bg-white p-3 rounded border">
-                  {candidature.sujet.formationDoctorale.ced.titre}
+                  {candidature.sujet.formationDoctorale.ced?.titre ?? 'Non disponible'}
                 </div>
               </div>
             </div>
