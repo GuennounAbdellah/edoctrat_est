@@ -300,7 +300,7 @@ public class DirecteurLaboController {
         }
     }
 
-    // GET /api/getAllFormations/ - Get all formations
+    // GET /api/getAllFormations/ - Get all formations sous form table
     @GetMapping("/formations/")
     public ResponseEntity<ResultDTO<FormationDoctoraleResponse>> getAllFormations(
             @RequestParam(required = false) Integer limit,

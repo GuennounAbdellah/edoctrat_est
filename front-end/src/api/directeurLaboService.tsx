@@ -53,7 +53,6 @@ export const DirecteurLaboService = {
   getAllSujets: async (): Promise<ResultResponse<SujetResponse>> => {
     try {
       const response = await apiClient.get<ResultResponse<SujetResponse>>('/api/sujetslabo/');
-      console.log('getAllSujets response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching sujets:', error);
@@ -214,7 +213,6 @@ export const DirecteurLaboService = {
   getJoinedCandidats: async (): Promise<PostulerJoinedResponse[]> => {
     try {
       const response = await apiClient.get<PostulerJoinedResponse[]>('/api/labo-candidats-joined/');
-      console.log('getJoinedCandidats response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching joined candidat data:', error);
@@ -226,6 +224,7 @@ export const DirecteurLaboService = {
   getFormations: async (): Promise<FormationDoctorale[]> => {
     try {
       const response = await apiClient.get<FormationDoctorale[]>('/api/formations/');
+      console.log('getFormations response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching formations:', error);
@@ -265,7 +264,6 @@ export const DirecteurLaboService = {
         situation_familiale: response.data.situation_familiale,
         fonctionnaire: response.data.fonctionnaire
       };
-      console.log('getCandidateByCNE response:', candidat);
       return candidat;
     } catch (error) {
       console.error('Error fetching candidate by CNE:', error);
@@ -309,5 +307,16 @@ export const DirecteurLaboService = {
       console.error('Error fetching candidate diplomes:', error);
       throw error;
     }
-  }
+  },
+
+  //GET all professeurs
+  getProfesseurs: async (): Promise<Professeur[]> => {
+    try {
+      const response = await apiClient.get<Professeur[]>('/api/get-professeurs/');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching professeurs:', error);
+      throw error;
+    }
+  },
 }

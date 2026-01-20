@@ -213,15 +213,15 @@ const DirecteurLaboInterface: React.FC = () => {
 
 
   const fetchFormations = async () => {
-    // try {
-    //   const response = await DirecteurLaboService.getFormations();
-    //   console.log('Fetched formations:', response);
-    //   // The getFormations method returns an array directly
-    //   setFormations(response || []);
-    // } catch (error) {
-    //   console.error('Error fetching formations:', error);
-    //   setFormations([]);
-    // }
+    try {
+      const response = await DirecteurLaboService.getFormations();
+      console.log('Fetched formations:', response);
+      // The getFormations method returns an array directly
+      setFormations(response || []);
+    } catch (error) {
+      console.error('Error fetching formations:', error);
+      setFormations([]);
+    }
   };
 
   const fetchResults = async () => {
@@ -240,7 +240,6 @@ const DirecteurLaboInterface: React.FC = () => {
   const fetchJoinedCandidats = async () => {
     try {
       const response = await DirecteurLaboService.getJoinedCandidats();
-      console.log('Fetched joined candidats:', response);
       // We don't need to store this separately since it's used in the CandidatesTab
       // Just log the data to confirm it's working
     } catch (error) {
@@ -657,12 +656,18 @@ const DirecteurLaboInterface: React.FC = () => {
                   <SelectValue placeholder="Sélectionner une formation" />
                 </SelectTrigger>
                 <SelectContent>
-                  {formations.map(formation => (
-                    <SelectItem key={formation.id} value={String(formation.id)}>
+                {Array.isArray(formations?.results) &&
+                  formations.results.map((formation) => (
+                    <SelectItem
+                      key={formation.id}
+                      value={String(formation.id)}
+                    >
                       {formation.titre}
                     </SelectItem>
-                  ))}
-                </SelectContent>
+                  ))
+                }
+              </SelectContent>
+
               </Select>
             </div>
           </div>
@@ -828,7 +833,7 @@ const DirecteurLaboInterface: React.FC = () => {
                   <div className="space-y-1">
                     <Label className="text-sm font-medium text-gray-500">Fonctionnaire</Label>
                     <div className="text-base font-semibold text-gray-900">
-                      {selectedCandidate.fonctionnaire ? 'Oui' : selectedCandidate.fonctionnaire === false ? 'Non' : 'Non spécifié'}
+                      {selectedCandidate.fonctionnaire === 'true' ? 'Oui' : selectedCandidate.fonctionnaire === 'false' ? 'Non' : 'Non spécifié'}
                     </div>
                   </div>
                   {selectedCandidate.typeDeHandiCape && (

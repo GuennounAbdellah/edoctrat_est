@@ -264,62 +264,6 @@ const SubjectsTab: React.FC<SubjectsTabProps> = ({
                 </DataTable>
             </motion.div>
             
-            {/* Edit Subject Dialog */}
-            {isEditDialogOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-                        <h2 className="text-xl font-bold mb-4">Modifier le sujet</h2>
-                        <div className="py-4 space-y-4">
-                            <div>
-                                <label htmlFor="titre" className="block text-sm font-medium mb-1">Titre</label>
-                                <input
-                                    id="titre"
-                                    name="titre"
-                                    value={formData.titre}
-                                    onChange={handleInputChange}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                                />
-                            </div>
-                            <div>
-                                <label htmlFor="description" className="block text-sm font-medium mb-1">Description</label>
-                                <textarea
-                                    id="description"
-                                    name="description"
-                                    value={formData.description}
-                                    onChange={handleInputChange}
-                                    rows={3}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                                />
-                            </div>
-                            <div className="flex items-center">
-                                <input
-                                    id="publier"
-                                    name="publier"
-                                    type="checkbox"
-                                    checked={formData.publier}
-                                    onChange={handleInputChange}
-                                    className="mr-2"
-                                />
-                                <label htmlFor="publier" className="block text-sm font-medium">Publier</label>
-                            </div>
-                        </div>
-                        <div className="flex justify-end space-x-2 pt-4">
-                            <Button 
-                                variant="outline" 
-                                onClick={() => setIsEditDialogOpen(false)}
-                            >
-                                Annuler
-                            </Button>
-                            <Button 
-                                onClick={handleUpdateSubject}
-                            >
-                                Enregistrer
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            )}
-            
             {/* Delete Confirmation Dialog */}
             {isDeleteDialogOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
