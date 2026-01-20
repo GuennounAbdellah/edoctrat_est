@@ -28,6 +28,13 @@ interface ResultResponse<T> {
   results: T[];
 }
 
+interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
 
 export const DirecteurLaboService = {
 
@@ -295,10 +302,9 @@ export const DirecteurLaboService = {
   // Get diplomes for a specific candidate
   getCandidateDiplomes: async (cne: string): Promise<Diplome[]> => {
     try {
-      const response = await apiClient.get<Diplome[]>('/api/candidat-parcours/');
-      // Filter diplomes by candidate CNE (since the endpoint returns all diplomes for the logged-in candidate)
-      // For now, we'll return all diplomes since the backend filters by authenticated user
-      return response.data;
+      const response = await apiClient.get<{results: Diplome[]}>('/api/get-candidat-diplome-by-cne/' + cne);
+      // Extract the diplomes from the paginated response
+      return response.data.results || [];
     } catch (error) {
       console.error('Error fetching candidate diplomes:', error);
       throw error;
