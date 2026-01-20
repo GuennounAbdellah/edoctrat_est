@@ -6,15 +6,7 @@ import {
   FileText, 
   Download, 
   GraduationCap, 
-  Eye, 
-  EyeOff,
   Search,
-  Table,
-  Calendar,
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertTriangle,
   UserCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -32,47 +24,22 @@ import {
 import Layout from '@/components/layout/Layout';
 import Header from '@/components/layout/Header';
 import { toast } from 'sonner';
-import { directeurCedApi } from '@/api/authService';
+import apiClient from '@/api/api';
 
-// Define types based on the backend models
-interface Candidat {
-  id: number;
-  cne: string;
-  nom: string;
-  prenom: string;
-  email: string;
-  telCandidat: string;
-  dateDeNaissance: string;
-  ville: string;
-  etatDossier: number;
+// Import models from existing project models
+import { Candidat } from '@/models/Candidat';
+import { Sujet } from '@/models/Sujet';
+import { ExaminerResponse } from '@/models/ExaminerResponse';
+
+// Response interface matching backend ResultDTO
+interface ResultDTO<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
 }
 
-interface Professeur {
-  id: number;
-  nom: string;
-  prenom: string;
-}
-
-interface Sujet {
-  id: number;
-  professeur: Professeur;
-  coDirecteur: Professeur | null;
-  titre: string;
-  description: string;
-  publier: boolean;
-}
-
-interface Examiner {
-  id: number;
-  sujet: Sujet;
-  cne: string;
-  noteDossier: number;
-  noteEntretien: number;
-  decision: string;
-  candidat: Candidat;
-  publier: boolean;
-}
-
+// Define Inscription interface based on backend InscriptionResponse
 interface Inscription {
   id: number;
   candidat: Candidat;
@@ -87,35 +54,34 @@ const DirecteurCed = () => {
   const [activeTab, setActiveTab] = useState<'candidats' | 'sujets' | 'resultats' | 'inscrits'>('candidats');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   
-  // Mock data - will be replaced with actual API calls
-  const [candidats, setCandidats] = useState<Candidat[]>([]);
+  // State for data - using proper types
+  const [candidats, setCandidats] = useState<ExaminerResponse[]>([]);
   const [sujets, setSujets] = useState<Sujet[]>([]);
-  const [resultats, setResultats] = useState<Examiner[]>([]);
+  const [resultats, setResultats] = useState<ExaminerResponse[]>([]);
   const [inscrits, setInscrits] = useState<Inscription[]>([]);
 
-  // Fetch data from API
+  // Fetch data from API using apiClient (axios) following project pattern
   const fetchData = async () => {
     console.log('Fetching data for Directeur CED...');
     setLoading(true);
     try {
-      // Fetch candidats
+      // Fetch candidats (examiners) - backend returns ResultDTO<ExaminerResponse>
       console.log('Calling getCedCandidats...');
-      const candidatsData = await directeurCedApi.getCedCandidats();
-      setCandidats(candidatsData.data || []);
+      const candidatsResponse = await apiClient.get<ResultDTO<ExaminerResponse>>('/api/get-ced-candidats/');
+      setCandidats(candidatsResponse.data.results || []);
       
-      // Fetch sujets
-      const sujetsData = await directeurCedApi.getCedSujets();
-      setSujets(sujetsData.data || []);
+      // Fetch sujets - backend returns ResultDTO<SujetResponse>
+      const sujetsResponse = await apiClient.get<ResultDTO<Sujet>>('/api/get-ced-sujets/');
+      setSujets(sujetsResponse.data.results || []);
       
-      // Fetch resultats
-      const resultatsData = await directeurCedApi.getCedResultats();
-      setResultats(resultatsData.data || []);
+      // Fetch resultats (published examiners) - backend returns ResultDTO<ExaminerResponse>
+      const resultatsResponse = await apiClient.get<ResultDTO<ExaminerResponse>>('/api/get-ced-resultats/');
+      setResultats(resultatsResponse.data.results || []);
       
-      // Fetch inscrits
-      const inscritsData = await directeurCedApi.getAllInscriptions();
-      setInscrits(inscritsData.data || []);
+      // Fetch inscrits - backend returns ResultDTO<InscriptionResponse>
+      const inscritsResponse = await apiClient.get<ResultDTO<Inscription>>('/api/get-ced-inscriptions/');
+      setInscrits(inscritsResponse.data.results || []);
     } catch (error) {
       toast.error('Erreur lors du chargement des données');
       console.error('Error fetching data:', error);
@@ -128,42 +94,46 @@ const DirecteurCed = () => {
     fetchData();
   }, []);
 
-  // Filter data based on search term
-  const filteredCandidats = candidats.filter(candidat =>
-    candidat.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    candidat.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    candidat.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    candidat.cne.toLowerCase().includes(searchTerm.toLowerCase())
+  // Filter data based on search term - updated for ExaminerResponse structure
+  const filteredCandidats = candidats.filter(examiner =>
+    examiner.candidat?.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    examiner.candidat?.prenom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    examiner.candidat?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    examiner.candidat?.cne?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    examiner.cne?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredSujets = sujets.filter(sujet =>
-    sujet.titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    sujet.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    sujet.professeur.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    sujet.professeur.prenom.toLowerCase().includes(searchTerm.toLowerCase())
+    sujet.titre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    sujet.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    sujet.professeur?.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    sujet.professeur?.prenom?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredResultats = resultats.filter(resultat =>
-    resultat.candidat.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    resultat.candidat.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    resultat.sujet.titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    resultat.decision.toLowerCase().includes(searchTerm.toLowerCase())
+    resultat.candidat?.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    resultat.candidat?.prenom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    resultat.sujet?.titre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    resultat.decision?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredInscrits = inscrits.filter(inscrit =>
-    inscrit.candidat.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    inscrit.candidat.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    inscrit.sujet.titre.toLowerCase().includes(searchTerm.toLowerCase())
+    inscrit.candidat?.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    inscrit.candidat?.prenom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    inscrit.sujet?.titre?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Function to download report
   const downloadReport = async () => {
     try {
-      const blob = await directeurCedApi.downloadRegistrationReport();
+      const response = await apiClient.get('/api/download-registration-report', {
+        responseType: 'blob'
+      });
+      const blob = new Blob([response.data as BlobPart]);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'rapport-inscriptions.xlsx'; // Or appropriate file extension
+      a.download = 'rapport-inscriptions.xlsx';
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -177,12 +147,17 @@ const DirecteurCed = () => {
 
   // Function to get decision badge
   const getDecisionBadge = (decision: string) => {
+    if (!decision) return <Badge variant="secondary">Non défini</Badge>;
     switch (decision.toLowerCase()) {
       case 'accepte':
+      case 'accepté':
+      case 'admis':
         return <Badge variant="default" className="bg-green-500">Accepté</Badge>;
       case 'refuse':
+      case 'refusé':
         return <Badge variant="default" className="bg-red-500">Refusé</Badge>;
       case 'attente':
+      case 'en attente':
         return <Badge variant="default" className="bg-yellow-500">En attente</Badge>;
       default:
         return <Badge variant="secondary">{decision}</Badge>;
@@ -310,26 +285,20 @@ const DirecteurCed = () => {
                           <TableHead>Prénom</TableHead>
                           <TableHead>Email</TableHead>
                           <TableHead>Téléphone</TableHead>
-                          <TableHead>Date de naissance</TableHead>
-                          <TableHead>Ville</TableHead>
-                          <TableHead>État du dossier</TableHead>
+                          <TableHead>Sujet</TableHead>
+                          <TableHead>Décision</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredCandidats.map((candidat) => (
-                          <TableRow key={candidat.id}>
-                            <TableCell className="font-medium">{candidat.cne}</TableCell>
-                            <TableCell>{candidat.nom}</TableCell>
-                            <TableCell>{candidat.prenom}</TableCell>
-                            <TableCell>{candidat.email}</TableCell>
-                            <TableCell>{candidat.telCandidat}</TableCell>
-                            <TableCell>{new Date(candidat.dateDeNaissance).toLocaleDateString()}</TableCell>
-                            <TableCell>{candidat.ville}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline">
-                                {candidat.etatDossier === 1 ? 'En cours' : candidat.etatDossier === 2 ? 'Terminé' : 'Inconnu'}
-                              </Badge>
-                            </TableCell>
+                        {filteredCandidats.map((examiner) => (
+                          <TableRow key={examiner.id}>
+                            <TableCell className="font-medium">{examiner.candidat?.cne || examiner.cne}</TableCell>
+                            <TableCell>{examiner.candidat?.nom || '-'}</TableCell>
+                            <TableCell>{examiner.candidat?.prenom || '-'}</TableCell>
+                            <TableCell>{examiner.candidat?.email || '-'}</TableCell>
+                            <TableCell>{examiner.candidat?.telCandidat || '-'}</TableCell>
+                            <TableCell>{examiner.sujet?.titre || '-'}</TableCell>
+                            <TableCell>{getDecisionBadge(examiner.decision)}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -352,7 +321,7 @@ const DirecteurCed = () => {
                           <TableRow key={sujet.id}>
                             <TableCell className="font-medium">{sujet.titre}</TableCell>
                             <TableCell className="max-w-xs truncate">{sujet.description}</TableCell>
-                            <TableCell>{`${sujet.professeur.nom} ${sujet.professeur.prenom}`}</TableCell>
+                            <TableCell>{sujet.professeur ? `${sujet.professeur.nom} ${sujet.professeur.prenom}` : '-'}</TableCell>
                             <TableCell>
                               {sujet.coDirecteur 
                                 ? `${sujet.coDirecteur.nom} ${sujet.coDirecteur.prenom}` 
@@ -380,10 +349,10 @@ const DirecteurCed = () => {
                       <TableBody>
                         {filteredResultats.map((resultat) => (
                           <TableRow key={resultat.id}>
-                            <TableCell className="font-medium">{resultat.sujet.titre}</TableCell>
-                            <TableCell>{`${resultat.candidat.nom} ${resultat.candidat.prenom}`}</TableCell>
-                            <TableCell>{resultat.noteDossier}</TableCell>
-                            <TableCell>{resultat.noteEntretien}</TableCell>
+                            <TableCell className="font-medium">{resultat.sujet?.titre || '-'}</TableCell>
+                            <TableCell>{resultat.candidat ? `${resultat.candidat.nom} ${resultat.candidat.prenom}` : '-'}</TableCell>
+                            <TableCell>{resultat.noteDossier ?? '-'}</TableCell>
+                            <TableCell>{resultat.noteEntretien ?? '-'}</TableCell>
                             <TableCell>{getDecisionBadge(resultat.decision)}</TableCell>
                             <TableCell>{getPublicationBadge(resultat.publier)}</TableCell>
                           </TableRow>
@@ -407,11 +376,11 @@ const DirecteurCed = () => {
                         {filteredInscrits.map((inscrit) => (
                           <TableRow key={inscrit.id}>
                             <TableCell className="font-medium">
-                              {`${inscrit.candidat.nom} ${inscrit.candidat.prenom}`}
+                              {inscrit.candidat ? `${inscrit.candidat.nom} ${inscrit.candidat.prenom}` : '-'}
                             </TableCell>
-                            <TableCell>{inscrit.sujet.titre}</TableCell>
-                            <TableCell>{new Date(inscrit.dateDiposeDossier).toLocaleDateString()}</TableCell>
-                            <TableCell>{inscrit.remarque}</TableCell>
+                            <TableCell>{inscrit.sujet?.titre || '-'}</TableCell>
+                            <TableCell>{inscrit.dateDiposeDossier ? new Date(inscrit.dateDiposeDossier).toLocaleDateString() : '-'}</TableCell>
+                            <TableCell>{inscrit.remarque || '-'}</TableCell>
                             <TableCell>{getStatusBadge(inscrit.valider)}</TableCell>
                           </TableRow>
                         ))}

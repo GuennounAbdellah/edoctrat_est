@@ -11,7 +11,13 @@ import ResetPassword from "./pages/auth/ResetPassword";
 import Laboratoires from "./pages/home/Laboratoires";
 import Formations from "./pages/home/Formations";
 import Calendrier from "./pages/home/Calendrier";
-import DirecteurCed from "./pages/directeur-ced/DirecteurCed";
+import DirecteurCedLayout from "./pages/directeur-ced/DirecteurCedLayout";
+import {
+  CandidatsPage as CedCandidatsPage,
+  SujetsPage as CedSujetsPage,
+  ResultatsPage as CedResultatsPage,
+  InscritsPage as CedInscritsPage
+} from "./pages/directeur-ced/pages";
 import DirecteurLabo from "./pages/directeur-labo/DirecteurLabo";
 
 import Scolarite from "./pages/scolarite/Scolarite";
@@ -46,7 +52,16 @@ const App = () => (
           <Route path="/laboratoires" element={<Laboratoires />} />
           <Route path="/formations" element={<Formations />} />
           <Route path="/calendrier" element={<Calendrier />} />
-          <Route path="/ced-dashboard" element={<DirecteurCed />} />
+          
+          {/* Directeur CED nested routes */}
+          <Route path="/ced-dashboard" element={<DirecteurCedLayout />}>
+            <Route index element={<Navigate to="candidats" replace />} />
+            <Route path="candidats" element={<CedCandidatsPage />} />
+            <Route path="sujets" element={<CedSujetsPage />} />
+            <Route path="resultats" element={<CedResultatsPage />} />
+            <Route path="inscrits" element={<CedInscritsPage />} />
+          </Route>
+          
           <Route path="/labo-dashboard" element={<DirecteurLabo />} />
           <Route path="/scolarite-dashboard" element={<Scolarite />} />
           <Route path="/professeur-dashboard" element={<Professeur />} />
