@@ -2,6 +2,7 @@ package com.tppartdeux.edoctorat.controller.condidat;
 
 import com.tppartdeux.edoctorat.dto.professeur.ConfigResponse;
 import com.tppartdeux.edoctorat.dto.ResultDTO;
+import com.tppartdeux.edoctorat.dto.candidat.CandidatDTO;
 import com.tppartdeux.edoctorat.dto.candidat.CandidatResponse;
 import com.tppartdeux.edoctorat.dto.candidat.DiplomeResponse;
 import com.tppartdeux.edoctorat.dto.professeur.PostulerResponse;
@@ -449,11 +450,13 @@ public class CandidatController {
 
     //GET candidat by CNE
     @GetMapping("/get-candidat-by-cne/{cne}")
-    public ResponseEntity<Candidat> getCandidatByCne(@PathVariable String cne) {
+    public ResponseEntity<CandidatDTO> getCandidatByCne(@PathVariable String cne) {
         Candidat candidat = candidatService.findByCne(cne).orElse(null);
         if (candidat == null) {
             return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.ok(candidat);
+        System.out.println(candidat);
+        return ResponseEntity.ok(dtoMapper.toCandidatDTO(candidat));
     }
+
 }

@@ -153,39 +153,26 @@ const DirecteurLaboInterface: React.FC = () => {
 
   const fetchCandidats = async () => {
     try {
+      // Note: This would require an appropriate API endpoint
+      // For now, we'll use the joined data approach since there doesn't seem to be a simple "get all candidats" endpoint
       const response = await DirecteurLaboService.getJoinedCandidats();
-      console.log('Fetched joined candidats:', response);
-      // Transform the response to match Candidat interface
-      const transformedCandidats: Candidat[] = response.map(item => ({
-        id: item.candidat.id,
-        cne: item.candidat.cne,
-        nom: item.candidat.nom,
-        prenom: item.candidat.prenom,
-        email: item.candidat.email,
-        cin: item.candidat.cin,
-        pays: item.candidat.pays,
-        nomCandidatAr: item.candidat.nomCandidatAr,
-        prenomCandidatAr: item.candidat.prenomCandidatAr,
-        adresse: item.candidat.adresse,
-        adresseAr: item.candidat.adresseAr,
-        sexe: item.candidat.sexe,
-        villeDeNaissance: item.candidat.villeDeNaissance,
-        villeDeNaissanceAr: item.candidat.villeDeNaissanceAr,
-        ville: item.candidat.ville,
-        dateDeNaissance: item.candidat.dateDeNaissance,
-        typeDeHandiCape: item.candidat.typeDeHandiCape,
-        academie: item.candidat.academie,
-        telCandidat: item.candidat.telCandidat,
-        pathCv: item.candidat.pathCv,
-        pathPhoto: item.candidat.pathPhoto,
-        etatDossier: item.candidat.etatDossier,
-        situation_familiale: item.candidat.situation_familiale,
-        fonctionnaire: item.candidat.fonctionnaire
-      }));
-      setCandidats(transformedCandidats);
+      
+      // Extract unique candidates from the joined data
+      const uniqueCandidats = response.reduce((acc: Candidat[], item) => {
+        // Check if candidate already exists in accumulator
+        const exists = acc.some(c => c.cne === item.candidat.cne);
+        
+        if (!exists) {
+          acc.push(item.candidat);
+        }
+        
+        return acc;
+      }, []);
+      
+      setCandidats(uniqueCandidats);
     } catch (error) {
       console.error('Error fetching candidats:', error);
-      setCandidats([]);
+      setCandidats([]); // Set to empty array on error
     }
   };
 
@@ -335,40 +322,44 @@ const DirecteurLaboInterface: React.FC = () => {
   };
 
   const handleViewCandidateDetails = async (candidateData: any) => {
-    // Fetch complete candidate data from the database
-    let completeCandidate;
-    try {
-      completeCandidate = await DirecteurLaboService.getCandidateByCNE(candidateData.cne);
-    } catch (error) {
-      console.error('Error fetching complete candidate data:', error);
-      // Use fallback candidate data if API call fails
-      completeCandidate = {
-        id: candidateData.id,
-        cne: candidateData.cne,
-        nom: candidateData.nom,
-        prenom: candidateData.prenom,
-        // Add other fields with default values since we don't have the full candidat data
-        pays: '',
-        email: '',
-        cin: '',
-        nomCandidatAr: undefined,
-        prenomCandidatAr: undefined,
-        adresse: '',
-        adresseAr: undefined,
-        sexe: '',
-        villeDeNaissance: '',
-        villeDeNaissanceAr: undefined,
-        ville: '',
-        dateDeNaissance: '',
-        typeDeHandiCape: '',
-        academie: undefined,
-        telCandidat: '',
-        pathCv: undefined,
-        pathPhoto: undefined,
-        etatDossier: undefined,
-        situation_familiale: undefined,
-        fonctionnaire: undefined
-      };
+    // Check if we already have the candidate data in our local state
+    let completeCandidate = candidats.find(c => c.cne === candidateData.cne);
+    
+    if (!completeCandidate) {
+      // Fetch complete candidate data from the database if not found locally
+      try {
+        completeCandidate = await DirecteurLaboService.getCandidateByCNE(candidateData.cne);
+      } catch (error) {
+        console.error('Error fetching complete candidate data:', error);
+        // Use fallback candidate data if API call fails
+        completeCandidate = {
+          id: candidateData.id,
+          cne: candidateData.cne,
+          nom: candidateData.nom,
+          prenom: candidateData.prenom,
+          // Add other fields with default values since we don't have the full candidat data
+          pays: '',
+          email: '',
+          cin: '',
+          nomCandidatAr: undefined,
+          prenomCandidatAr: undefined,
+          adresse: '',
+          adresseAr: undefined,
+          sexe: '',
+          villeDeNaissance: '',
+          villeDeNaissanceAr: undefined,
+          ville: '',
+          dateDeNaissance: '',
+          typeDeHandiCape: '',
+          academie: undefined,
+          telCandidat: '',
+          pathCv: undefined,
+          pathPhoto: undefined,
+          etatDossier: undefined,
+          situation_familiale: undefined,
+          fonctionnaire: undefined
+        };
+      }
     }
     
     // Combine the complete candidate data with the joined data

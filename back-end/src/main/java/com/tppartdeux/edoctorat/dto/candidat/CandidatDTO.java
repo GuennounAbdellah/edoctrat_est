@@ -1,8 +1,14 @@
 package com.tppartdeux.edoctorat.dto.candidat;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class CandidatDTO {
     private Long id;
     private String cne;
@@ -26,6 +32,6 @@ public class CandidatDTO {
     private String pathCv;
     private String pathPhoto;
     private Integer etatDossier;
-    private String situation_familiale;
-    private String fonctionnaire;
+    private String situationFamiliale;
+    private String fonctionaire;
 }
