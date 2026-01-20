@@ -391,25 +391,37 @@ const DirecteurLaboInterface: React.FC = () => {
 
   // Filter functions
   const filteredCandidats = candidats.filter(candidat =>
-    candidat.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    candidat.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    candidat.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    candidat.cne.toLowerCase().includes(searchTerm.toLowerCase())
+    candidat && 
+    candidat.nom && 
+    candidat.prenom && 
+    candidat.email && 
+    candidat.cne && (
+      candidat.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      candidat.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      candidat.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      candidat.cne.toLowerCase().includes(searchTerm.toLowerCase())
+    )
   );
 
   const filteredSujets = sujets.filter(sujet =>
-    sujet.titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    sujet.description.toLowerCase().includes(searchTerm.toLowerCase())
+    sujet && 
+    sujet.titre && (
+      sujet.titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (sujet.description && sujet.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
   );
 
   const filteredCommissions = commissions.filter(commission =>
+    commission && commission.lieu && 
     commission.lieu.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredResults = results.filter(result =>
-    result.candidat?.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    result.candidat?.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    result.sujet?.titre.toLowerCase().includes(searchTerm.toLowerCase())
+    result && (
+      (result.candidat?.nom && result.candidat.nom.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (result.candidat?.prenom && result.candidat.prenom.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (result.sujet?.titre && result.sujet.titre.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
   );
 
   const getDecisionBadge = (decision: string) => {
