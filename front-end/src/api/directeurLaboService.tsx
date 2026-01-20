@@ -313,6 +313,7 @@ export const DirecteurLaboService = {
   getProfesseurs: async (): Promise<Professeur[]> => {
     try {
       const response = await apiClient.get<Professeur[]>('/api/get-professeurs/');
+      console.log('getProfesseurs response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching professeurs:', error);
