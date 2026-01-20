@@ -39,7 +39,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:8080")
+@CrossOrigin(origins = "http://localhost:8081")
 public class CandidatController {
 
     private final CandidatService candidatService;
@@ -459,4 +459,13 @@ public class CandidatController {
         return ResponseEntity.ok(dtoMapper.toCandidatDTO(candidat));
     }
 
+    //GET candidat diplome by cne
+    @GetMapping("/get-candidat-diplome-by-cne/{cne}")
+    public ResponseEntity<List<Diplome>> getCandidatDiplomeByCne(@PathVariable String cne) {
+        Candidat candidat = candidatService.findByCne(cne).orElse(null);
+        if (candidat == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(diplomeService.findByCandidat(candidat));
+    }
 }

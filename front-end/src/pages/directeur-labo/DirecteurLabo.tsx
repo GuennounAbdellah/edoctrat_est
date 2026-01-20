@@ -158,7 +158,8 @@ const DirecteurLaboInterface: React.FC = () => {
       const response = await DirecteurLaboService.getJoinedCandidats();
       
       // Extract unique candidates from the joined data
-      const uniqueCandidats = response.reduce((acc: Candidat[], item) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const uniqueCandidats = response.reduce((acc: Candidat[], item: any) => {
         // Check if candidate already exists in accumulator
         const exists = acc.some(c => c.cne === item.candidat.cne);
         
@@ -321,6 +322,7 @@ const DirecteurLaboInterface: React.FC = () => {
     setShowLogoutConfirmation(false);
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleViewCandidateDetails = async (candidateData: any) => {
     // Check if we already have the candidate data in our local state
     let completeCandidate = candidats.find(c => c.cne === candidateData.cne);
@@ -724,124 +726,220 @@ const DirecteurLaboInterface: React.FC = () => {
           </DialogHeader>
           {selectedCandidate && (
             <div className="space-y-6 py-4">
-              {/* Section identité */}
-              <div className="bg-gray-50 p-6 rounded-lg">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">Informations Personnelles</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">CNE</Label>
-                    <div className="text-base font-semibold text-gray-900">{selectedCandidate.cne}</div>
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">CIN</Label>
-                    <div className="text-base text-gray-900">{selectedCandidate.cin}</div>
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">État du dossier</Label>
-                    <div>
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                        selectedCandidate.etatDossier === 1 ? 'bg-green-100 text-green-800' : 
-                        selectedCandidate.etatDossier === 0 ? 'bg-yellow-100 text-yellow-800' : 
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {selectedCandidate.etatDossier === 1 ? 'Validé' : 
-                         selectedCandidate.etatDossier === 0 ? 'En cours' : 'Refusé'}
-                      </span>
+              {/* Section avec photo et informations principales */}
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-8 rounded-xl shadow-sm">
+                <div className="flex flex-col md:flex-row gap-8">
+                  {/* Photo du candidat */}
+                  <div className="flex-shrink-0">
+                    <div className="relative w-48 h-48 mx-auto md:mx-0">
+                      <div className="w-full h-full rounded-2xl overflow-hidden shadow-lg border-4 border-white">
+                        {selectedCandidate.pathPhoto ? (
+                          <img 
+                            src={selectedCandidate.pathPhoto} 
+                            alt={`${selectedCandidate.prenom} ${selectedCandidate.nom}`}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center">
+                            <span className="text-6xl font-bold text-white">
+                              {selectedCandidate.prenom.charAt(0)}{selectedCandidate.nom.charAt(0)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      {/* Badge état du dossier */}
+                      <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2">
+                        <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold shadow-md ${
+                          selectedCandidate.etatDossier === 1 ? 'bg-green-500 text-white' : 
+                          selectedCandidate.etatDossier === 0 ? 'bg-yellow-500 text-white' : 
+                          'bg-red-500 text-white'
+                        }`}>
+                          {selectedCandidate.etatDossier === 1 ? '✓ Validé' : 
+                          selectedCandidate.etatDossier === 0 ? '⏳ En cours' : '✗ Refusé'}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Nom</Label>
-                    <div className="text-base text-gray-900">{selectedCandidate.nom}</div>
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Prénom</Label>
-                    <div className="text-base text-gray-900">{selectedCandidate.prenom}</div>
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Email</Label>
-                    <div className="text-base text-gray-900 truncate">{selectedCandidate.email}</div>
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Pays</Label>
-                    <div className="text-base text-gray-900">{selectedCandidate.pays}</div>
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Ville</Label>
-                    <div className="text-base text-gray-900">{selectedCandidate.ville}</div>
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Sexe</Label>
-                    <div className="text-base text-gray-900">{selectedCandidate.sexe}</div>
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Date de naissance</Label>
-                    <div className="text-base text-gray-900">{new Date(selectedCandidate.dateDeNaissance).toLocaleDateString()}</div>
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Téléphone</Label>
-                    <div className="text-base text-gray-900">{selectedCandidate.telCandidat}</div>
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Adresse</Label>
-                    <div className="text-base text-gray-900">{selectedCandidate.adresse}</div>
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Situation familiale</Label>
-                    <div className="text-base text-gray-900">{selectedCandidate.situation_familiale || 'Non spécifié'}</div>
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Fonctionnaire</Label>
-                    <div className="text-base text-gray-900">{selectedCandidate.fonctionnaire || 'Non spécifié'}</div>
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Type de handicap</Label>
-                    <div className="text-base text-gray-900">{selectedCandidate.typeDeHandiCape}</div>
-                  </div>
-                  {selectedCandidate.academie && (
+
+                  {/* Informations principales */}
+                  <div className="flex-1 space-y-6">
                     <div>
-                      <Label className="block text-sm font-medium text-gray-700 mb-1">Académie</Label>
-                      <div className="text-base text-gray-900">{selectedCandidate.academie}</div>
+                      <h3 className="text-3xl font-bold text-gray-900 mb-1">
+                        {selectedCandidate.prenom} {selectedCandidate.nom}
+                      </h3>
+                      <p className="text-lg text-gray-600">{selectedCandidate.email}</p>
                     </div>
-                  )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-sm">
+                        <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">CNE</Label>
+                        <div className="text-lg font-bold text-indigo-600">{selectedCandidate.cne}</div>
+                      </div>
+                      <div className="bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-sm">
+                        <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">CIN</Label>
+                        <div className="text-lg font-bold text-gray-900">{selectedCandidate.cin}</div>
+                      </div>
+                      <div className="bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-sm">
+                        <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">Téléphone</Label>
+                        <div className="text-lg font-bold text-gray-900">{selectedCandidate.telCandidat}</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
+
+              {/* Section informations personnelles détaillées */}
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 className="text-xl font-semibold text-gray-800 mb-6 pb-3 border-b-2 border-indigo-100 flex items-center gap-2">
+                  <div className="w-1 h-6 bg-indigo-600 rounded-full"></div>
+                  Informations Personnelles
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium text-gray-500">Sexe</Label>
+                    <div className="text-base font-semibold text-gray-900">{selectedCandidate.sexe}</div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium text-gray-500">Date de naissance</Label>
+                    <div className="text-base font-semibold text-gray-900">
+                      {new Date(selectedCandidate.dateDeNaissance).toLocaleDateString('fr-FR', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      })}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium text-gray-500">Ville de naissance</Label>
+                    <div className="text-base font-semibold text-gray-900">{selectedCandidate.villeDeNaissance}</div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium text-gray-500">Pays</Label>
+                    <div className="text-base font-semibold text-gray-900">{selectedCandidate.pays}</div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium text-gray-500">Ville</Label>
+                    <div className="text-base font-semibold text-gray-900">{selectedCandidate.ville}</div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium text-gray-500">Situation familiale</Label>
+                    <div className="text-base font-semibold text-gray-900">{selectedCandidate.situation_familiale || 'Non spécifié'}</div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium text-gray-500">Fonctionnaire</Label>
+                    <div className="text-base font-semibold text-gray-900">
+                      {selectedCandidate.fonctionnaire ? 'Oui' : selectedCandidate.fonctionnaire === false ? 'Non' : 'Non spécifié'}
+                    </div>
+                  </div>
+                  {selectedCandidate.typeDeHandiCape && (
+                    <div className="space-y-1">
+                      <Label className="text-sm font-medium text-gray-500">Type de handicap</Label>
+                      <div className="text-base font-semibold text-gray-900">{selectedCandidate.typeDeHandiCape}</div>
+                    </div>
+                  )}
+                  {selectedCandidate.academie && (
+                    <div className="space-y-1">
+                      <Label className="text-sm font-medium text-gray-500">Académie</Label>
+                      <div className="text-base font-semibold text-gray-900">{selectedCandidate.academie}</div>
+                    </div>
+                  )}
+                  <div className="md:col-span-2 lg:col-span-3 space-y-1">
+                    <Label className="text-sm font-medium text-gray-500">Adresse</Label>
+                    <div className="text-base font-semibold text-gray-900">{selectedCandidate.adresse}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section sujet postulé */}
+              {selectedCandidate.sujetPostule && (
+                <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-xl shadow-sm border border-purple-100">
+                  <h3 className="text-xl font-semibold text-gray-800 mb-4 pb-3 border-b-2 border-purple-200 flex items-center gap-2">
+                    <div className="w-1 h-6 bg-purple-600 rounded-full"></div>
+                    Candidature
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-600 block mb-2">Sujet postulé</Label>
+                      <div className="text-lg font-bold text-gray-900 bg-white/60 p-4 rounded-lg">
+                        {selectedCandidate.sujetPostule}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-white/60 p-4 rounded-lg">
+                        <Label className="text-sm font-medium text-gray-600 block mb-2">Directeur de thèse</Label>
+                        <div className="text-base font-semibold text-gray-900">
+                          {selectedCandidate.directeurPrenom} {selectedCandidate.directeurNom}
+                        </div>
+                      </div>
+                      {selectedCandidate.codirecteurNom && (
+                        <div className="bg-white/60 p-4 rounded-lg">
+                          <Label className="text-sm font-medium text-gray-600 block mb-2">Co-directeur</Label>
+                          <div className="text-base font-semibold text-gray-900">
+                            {selectedCandidate.codirecteurPrenom} {selectedCandidate.codirecteurNom}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="bg-white/60 p-4 rounded-lg">
+                      <Label className="text-sm font-medium text-gray-600 block mb-2">Formation doctorale</Label>
+                      <div className="text-base font-semibold text-gray-900">
+                        {selectedCandidate.formationDoctorale}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
               
               {/* Section diplômes */}
-              <div className="bg-purple-50 p-6 rounded-lg">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">Diplômes et Formation Antérieure</h3>
-                <div className="space-y-4">
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diplôme</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Spécialité</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Établissement</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Année</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Moyenne</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {candidateDiplomes && candidateDiplomes.length > 0 ? (
-                          candidateDiplomes.map((diplome) => (
-                            <tr key={diplome.id}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{diplome.intitule}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{diplome.specialite}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{diplome.etablissement}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{diplome.dateCommission ? new Date(diplome.dateCommission).getFullYear() : 'N/A'}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{diplome.moyen_generale ? `${diplome.moyen_generale}/20` : 'N/A'}</td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan={5} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                              Aucun diplôme enregistré
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 className="text-xl font-semibold text-gray-800 mb-6 pb-3 border-b-2 border-green-100 flex items-center gap-2">
+                  <div className="w-1 h-6 bg-green-600 rounded-full"></div>
+                  Diplômes et Formation Antérieure
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Diplôme</th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Spécialité</th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Établissement</th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Année</th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Moyenne</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-100">
+                      {candidateDiplomes && candidateDiplomes.length > 0 ? (
+                        candidateDiplomes.map((diplome, index) => (
+                          <tr key={diplome.id} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-6 py-4 text-sm font-semibold text-gray-900">{diplome.intitule}</td>
+                            <td className="px-6 py-4 text-sm text-gray-700">{diplome.specialite}</td>
+                            <td className="px-6 py-4 text-sm text-gray-700">{diplome.etablissement}</td>
+                            <td className="px-6 py-4 text-sm text-gray-700">
+                              {diplome.dateCommission ? new Date(diplome.dateCommission).getFullYear() : 'N/A'}
+                            </td>
+                            <td className="px-6 py-4 text-sm">
+                              <span className={`font-semibold ${
+                                diplome.moyen_generale && diplome.moyen_generale >= 14 ? 'text-green-600' :
+                                diplome.moyen_generale && diplome.moyen_generale >= 12 ? 'text-blue-600' :
+                                'text-gray-600'
+                              }`}>
+                                {diplome.moyen_generale ? `${diplome.moyen_generale}/20` : 'N/A'}
+                              </span>
                             </td>
                           </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-8 text-center">
+                            <div className="text-gray-400 text-sm">
+                              <BookOpen className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                              Aucun diplôme enregistré
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
