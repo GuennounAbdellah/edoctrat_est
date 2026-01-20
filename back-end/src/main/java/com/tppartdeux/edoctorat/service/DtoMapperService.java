@@ -44,6 +44,7 @@ public class DtoMapperService {
                 .pathCv(candidat.getPathCv())
                 .pathPhoto(candidat.getPathPhoto())
                 .etatDossier(candidat.getEtatDossier())
+                .commentaireScolarite(candidat.getCommentaireScolarite())
                 .situationFamiliale(candidat.getSituationFamiliale())
                 .fonctionnaire(candidat.getFonctionaire() != null ? candidat.getFonctionaire().toString() : null)
                 .build();

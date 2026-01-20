@@ -66,6 +66,9 @@ public class Candidat {
 
     private Integer etatDossier;
 
+    @Lob
+    private String commentaireScolarite;
+
     @Column(length = 50)
     private String situationFamiliale;
 

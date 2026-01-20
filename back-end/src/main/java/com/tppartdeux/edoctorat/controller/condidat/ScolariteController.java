@@ -53,6 +53,11 @@ public class ScolariteController {
                 candidat.setEtatDossier(Integer.valueOf(body.get("etatDossier").toString()));
             }
             
+            if (body.containsKey("commentaireScolarite")) {
+                Object comment = body.get("commentaireScolarite");
+                candidat.setCommentaireScolarite(comment != null ? comment.toString() : null);
+            }
+            
             Candidat updated = candidatService.update(id, candidat);
             return ResponseEntity.ok(dtoMapper.toCandidatResponse(updated));
         } catch (Exception e) {

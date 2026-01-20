@@ -21,6 +21,7 @@ export interface CandidatResponse {
     pathCv: string | undefined;
     pathPhoto: string | undefined;
     etatDossier: number | undefined;
+    commentaireScolarite: string | undefined;
     situation_familiale: string | undefined;
     fonctionnaire: string | undefined;
     sujetPostule: string;
