@@ -4,11 +4,8 @@ import {
   FileText,
   Search,
   ShoppingCart,
-  CheckCircle,
   Loader2,
   AlertCircle,
-  Trash2,
-  Upload,
   User,
   Building2,
   BookOpen
@@ -17,7 +14,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
@@ -56,7 +52,6 @@ interface Sujet {
 
 interface SelectedSujet extends Sujet {
   postulerId?: number;
-  pathFile?: string;
 }
 
 interface ApiError extends Error {
@@ -126,8 +121,7 @@ const PostulerPage: React.FC = () => {
               titre: p.sujet?.formationDoctorale?.titre || '',
               ced: { titre: p.sujet?.formationDoctorale?.ced?.titre || '' }
             },
-            laboratoire: p.sujet?.laboratoire || '',
-            pathFile: p.pathFile
+            laboratoire: p.sujet?.laboratoire || ''
           }));
           setSelectedSujets(selectedFromApi);
         } catch (postErr) {
@@ -159,23 +153,19 @@ const PostulerPage: React.FC = () => {
         }
       }
     } else {
-      await handleRemoveSujet(sujet.id);
-    }
-  };
-
-  const handleRemoveSujet = async (sujetId: number) => {
-    const sujet = selectedSujets.find(s => s.id === sujetId);
-    if (sujet?.postulerId) {
-      try {
-        await deletePostulation(sujet.postulerId);
-        setSelectedSujets(prev => prev.filter(s => s.id !== sujetId));
-      } catch (err: unknown) {
-        console.error('Error deleting postulation:', err);
-        const apiError = err as ApiError;
-        setError(apiError.friendlyMessage || 'Impossible de supprimer cette candidature.');
+      const selected = selectedSujets.find(s => s.id === sujet.id);
+      if (selected?.postulerId) {
+        try {
+          await deletePostulation(selected.postulerId);
+          setSelectedSujets(prev => prev.filter(s => s.id !== sujet.id));
+        } catch (err: unknown) {
+          console.error('Error deleting postulation:', err);
+          const apiError = err as ApiError;
+          setError(apiError.friendlyMessage || 'Impossible de supprimer cette candidature.');
+        }
+      } else {
+        setSelectedSujets(prev => prev.filter(s => s.id !== sujet.id));
       }
-    } else {
-      setSelectedSujets(prev => prev.filter(s => s.id !== sujetId));
     }
   };
 
@@ -238,55 +228,6 @@ const PostulerPage: React.FC = () => {
           </div>
         </CardContent>
       </Card>
-
-      {/* Selected Subjects */}
-      {selectedSujets.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-              Sujets sélectionnés ({selectedSujets.length}/{maxSujets})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {selectedSujets.map((sujet) => (
-              <div
-                key={sujet.id}
-                className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg gap-4"
-              >
-                <div className="flex-1">
-                  <h4 className="font-medium text-gray-900">{sujet.titre}</h4>
-                  <p className="text-sm text-gray-600">
-                    Prof. {sujet.professeur.prenom} {sujet.professeur.nom}
-                  </p>
-                  {sujet.pathFile && (
-                    <p className="text-sm text-primary mt-1">
-                      📄 Projet de thèse: {sujet.pathFile}
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="file"
-                      accept="application/pdf"
-                      className="max-w-[200px] text-sm"
-                    />
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    onClick={() => handleRemoveSujet(sujet.id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
 
       {/* Search Filters */}
       <Card>
