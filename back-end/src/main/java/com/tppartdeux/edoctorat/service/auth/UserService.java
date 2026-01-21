@@ -318,7 +318,21 @@ public class UserService {
         
         System.out.println("!!!!!!!registerCandidat - Starting registration for email: " + email);
         
-        // Check if email already exists using the explicit COUNT query
+        // Validation des champs requis
+        if (email == null || email.trim().isEmpty()) {
+            throw new RuntimeException("Email is required");
+        }
+        if (password == null || password.trim().isEmpty()) {
+            throw new RuntimeException("Password is required");
+        }
+        if (nom == null || nom.trim().isEmpty()) {
+            throw new RuntimeException("Nom is required");
+        }
+        if (prenom == null || prenom.trim().isEmpty()) {
+            throw new RuntimeException("Prenom is required");
+        }
+        
+        // Check if email already exists
         if (userRepository.existsByEmail(email)) {
             System.err.println("!!!!!!!registerCandidat - User already exists with email: " + email);
             throw new RuntimeException("Email already registered");
@@ -339,7 +353,7 @@ public class UserService {
                 .dateJoined(LocalDateTime.now())
                 .build();
         
-        userRepository.save(user);
+        user = userRepository.save(user);
         
         // Assign candidat group - create if it doesn't exist
         Group candidatGroup = groupRepository.findByName("candidat")
@@ -357,7 +371,7 @@ public class UserService {
         // Generate verification token (JWT with 24h expiry)
         String verificationToken = jwtTokenService.generateEmailVerificationToken(email);
         
-        // Send verification email
+        // Send verification email - don't fail registration if email fails
         try {
             String fullName = prenom + " " + nom;
             emailSenderService.sendEmailVerification(email, fullName, verificationToken);
@@ -366,12 +380,8 @@ public class UserService {
             System.err.println("⚠️ Failed to send verification email to: " + email);
             System.err.println("Error details: " + e.getMessage());
             e.printStackTrace();
-            // Don't delete the user - they can request a new verification email
-            // The user is created but inactive, they can use resend-verification endpoint
-            System.err.println("⚠️ User created but email verification failed. User ID: " + user.getId());
-            System.err.println("⚠️ User can use /api/resend-verification/ endpoint to receive the email");
-            // Throw exception to inform the caller, but user remains in database
-            throw new RuntimeException("Failed to send verification email: " + e.getMessage());
+            // DON'T throw exception - user is created, they can resend verification
+            System.err.println("⚠️ User created successfully. User can use /api/resend-verification/ endpoint");
         }
     }
 

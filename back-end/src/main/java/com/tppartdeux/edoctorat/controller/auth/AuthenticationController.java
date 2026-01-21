@@ -209,11 +209,45 @@ public class AuthenticationController {
     // POST /api/register/candidat/ - Register new candidat
     @PostMapping("/register/candidat/")
     public ResponseEntity<?> registerCandidat(@RequestBody Map<String, Object> payload) {
+        System.out.println("========== REGISTRATION DEBUG ==========");
+        System.out.println("Payload received: " + payload);
+        System.out.println("Email: " + payload.get("email"));
+        System.out.println("Nom: " + payload.get("nom"));
+        System.out.println("Prenom: " + payload.get("prenom"));
+        System.out.println("=======================================");
+        
         try {
             userService.registerCandidat(payload);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.ok(Map.of("message", "Registration successful"));
         } catch (RuntimeException e) {
+            System.err.println("ERROR: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/test-registration")
+    public ResponseEntity<?> testRegistration(@RequestBody Map<String, Object> payload) {
+        Map<String, Object> diagnostics = new HashMap<>();
+        
+        try {
+            diagnostics.put("payload_received", payload);
+            diagnostics.put("email", payload.get("email"));
+            diagnostics.put("password_length", payload.get("password") != null ? 
+                ((String)payload.get("password")).length() : 0);
+            diagnostics.put("nom", payload.get("nom"));
+            diagnostics.put("prenom", payload.get("prenom"));
+            
+            // Test email exists
+            String email = (String) payload.get("email");
+            boolean exists = userService.existsByEmail(email);
+            diagnostics.put("email_already_exists", exists);
+            
+            return ResponseEntity.ok(diagnostics);
+        } catch (Exception e) {
+            diagnostics.put("error", e.getMessage());
+            diagnostics.put("stack_trace", e.getStackTrace()[0].toString());
+            return ResponseEntity.ok(diagnostics);
         }
     }
 
