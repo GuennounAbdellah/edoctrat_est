@@ -35,6 +35,7 @@ public class DirecteurLaboController {
     private final ExaminerService examinerService;
     private final DtoMapperService dtoMapper;
     private final PostulerService postulerService;
+    private final FormationDoctoraleService formationDoctoraleService;
 
     @GetMapping("/labo-candidats-joined/")
     public ResponseEntity<List<PostulerJoinedResponse>> getCandidatsJoined(
@@ -296,6 +297,27 @@ public class DirecteurLaboController {
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             return ResponseEntity.status(400).build();
+        }
+    }
+
+    // GET /api/getAllFormations/ - Get all formations sous form table
+    @GetMapping("/formations/")
+    public ResponseEntity<ResultDTO<FormationDoctoraleResponse>> getAllFormations(
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) Integer offset) {
+        try {
+            List<FormationDoctorale> formations = formationDoctoraleService.findAll();
+    
+            int start = offset != null ? offset : 0;
+            int end = limit != null ? Math.min(start + limit, formations.size()) : formations.size();
+    
+            List<FormationDoctoraleResponse> responses = formations.subList(start, end).stream()
+                    .map(dtoMapper::toFormationDoctoraleResponse)
+                    .collect(Collectors.toList());
+    
+            return ResponseEntity.ok(ResultDTO.of(responses, formations.size(), null, null));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
         }
     }
 }

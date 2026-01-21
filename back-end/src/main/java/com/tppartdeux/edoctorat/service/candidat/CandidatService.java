@@ -41,7 +41,7 @@ public class CandidatService {
     }
 
     public Optional<Candidat> findByCne(String cne) {
-        return candidatRepository.findByCne(cne);
+        return candidatRepository.findByCneWithUserAndPays(cne);
     }
 
     public Optional<Candidat> findByUser(User user) {

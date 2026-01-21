@@ -1,8 +1,6 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { ToastProvider, ToastViewport } from "@/components/ui/toast";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/home/Index";
 import Login from "./pages/auth/Login";
 import PreInscription from "./pages/auth/PreInscription";
@@ -13,21 +11,54 @@ import ResetPassword from "./pages/auth/ResetPassword";
 import Laboratoires from "./pages/home/Laboratoires";
 import Formations from "./pages/home/Formations";
 import Calendrier from "./pages/home/Calendrier";
-import DirecteurCed from "./pages/directeur-ced/DirecteurCed";
-import DirecteurLaboInterface from "./pages/directeur-labo/DirecteurLabo";
+import DirecteurCedLayout from "./pages/directeur-ced/DirecteurCedLayout";
+import {
+  CandidatsPage as CedCandidatsPage,
+  SujetsPage as CedSujetsPage,
+  ResultatsPage as CedResultatsPage,
+  InscritsPage as CedInscritsPage
+} from "./pages/directeur-ced/pages";
+import DirecteurLabo from "./pages/directeur-labo/DirecteurLabo";
+
 import Scolarite from "./pages/scolarite/Scolarite";
-import Professeur from "./pages/professeur/Prefesseur";
-import Candidat from "./pages/candidat/Candidat";
-import DirecteurPole from "./pages/directeur-pole/DirecteurPole";
+import ProfesseurLayout from "./pages/professeur/ProfesseurLayout";
+import {
+  SujetsPage as ProfSujetsPage,
+  CommissionsPage as ProfCommissionsPage,
+  ResultatsPage as ProfResultatsPage,
+  InscritsPage as ProfInscritsPage
+} from "./pages/professeur/pages";
+
+// Candidat imports
+import CandidatLayout from "./pages/candidat/CandidatLayout";
+import {
+  InfoPersonnellesPage,
+  ParcoursPage,
+  PostulerPage,
+  NotificationsPage,
+  BacForm,
+  LicenceForm,
+  MasterForm,
+  DutForm,
+  IngenieurForm
+} from "./pages/candidat/pages";
+
+import DirecteurPoleLayout from "./pages/directeur-pole/DirecteurPoleLayout";
+import {
+  SujetsPage,
+  CandidatsPage,
+  CommissionsPage,
+  CalendrierPage,
+  CommuniquerPage,
+  InscriptionPage
+} from "./pages/directeur-pole/pages";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
+    <ToastProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
@@ -41,17 +72,61 @@ const App = () => (
           <Route path="/laboratoires" element={<Laboratoires />} />
           <Route path="/formations" element={<Formations />} />
           <Route path="/calendrier" element={<Calendrier />} />
-          <Route path="/ced-dashboard" element={<DirecteurCed />} />
-          <Route path="/labo-dashboard" element={<DirecteurLaboInterface />} />
+          
+          {/* Directeur CED nested routes */}
+          <Route path="/ced-dashboard" element={<DirecteurCedLayout />}>
+            <Route index element={<Navigate to="candidats" replace />} />
+            <Route path="candidats" element={<CedCandidatsPage />} />
+            <Route path="sujets" element={<CedSujetsPage />} />
+            <Route path="resultats" element={<CedResultatsPage />} />
+            <Route path="inscrits" element={<CedInscritsPage />} />
+          </Route>
+          
+          <Route path="/labo-dashboard" element={<DirecteurLabo />} />
           <Route path="/scolarite-dashboard" element={<Scolarite />} />
-          <Route path="/professeur-dashboard" element={<Professeur />} />
-          <Route path="/candidat-dashboard" element={<Candidat />} />
-          <Route path="/pole-dashboard" element={<DirecteurPole />} />
+          
+          {/* Professeur nested routes */}
+          <Route path="/professeur-dashboard" element={<ProfesseurLayout />}>
+            <Route index element={<Navigate to="sujets" replace />} />
+            <Route path="sujets" element={<ProfSujetsPage />} />
+            <Route path="commissions" element={<ProfCommissionsPage />} />
+            <Route path="resultats" element={<ProfResultatsPage />} />
+            <Route path="inscrits" element={<ProfInscritsPage />} />
+          </Route>
+          
+          {/* Candidat nested routes */}
+          <Route path="/candidat-dashboard" element={<CandidatLayout />}>
+            <Route index element={<Navigate to="info-personnelles" replace />} />
+            <Route path="info-personnelles" element={<InfoPersonnellesPage />} />
+            <Route path="parcours" element={<ParcoursPage />}>
+              <Route index element={<Navigate to="bac" replace />} />
+              <Route path="bac" element={<BacForm />} />
+              <Route path="licence" element={<LicenceForm />} />
+              <Route path="master" element={<MasterForm />} />
+              <Route path="dut" element={<DutForm />} />
+              <Route path="ingenieur" element={<IngenieurForm />} />
+            </Route>
+            <Route path="postuler" element={<PostulerPage />} />
+            <Route path="notifications" element={<NotificationsPage />} />
+          </Route>
+          
+          {/* Directeur Pole nested routes */}
+          <Route path="/pole-dashboard" element={<DirecteurPoleLayout />}>
+            <Route index element={<Navigate to="sujets" replace />} />
+            <Route path="sujets" element={<SujetsPage />} />
+            <Route path="candidats" element={<CandidatsPage />} />
+            <Route path="commissions" element={<CommissionsPage />} />
+            <Route path="calendrier" element={<CalendrierPage />} />
+            <Route path="communiquer" element={<CommuniquerPage />} />
+            <Route path="inscription" element={<InscriptionPage />} />
+          </Route>
+          
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
-    </TooltipProvider>
+      <ToastViewport />
+    </ToastProvider>
   </QueryClientProvider>
 );
 

@@ -13,7 +13,7 @@ interface JwtPayload {
   authorities?: string[];
   roles?: string[];
   groups?: string[];
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 const stats = [
@@ -142,7 +142,7 @@ const Index = () => {
         </div>
 
         {/* Content */}
-        <div className="relative container mx-auto px-4 lg:px-8 py-0">
+        <div className="relative container mx-auto px-4 lg:px-8 py-0 scale-[0.9]">
           <div className="max-w-3xl">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -213,7 +213,7 @@ const Index = () => {
           transition={{ duration: 0.6, delay: 0.5 }}
           className="absolute bottom-0 left-0 right-0 glass-dark border-t border-primary-foreground/10"
         >
-          <div className="container mx-auto px-4 lg:px-8">
+          <div className="container mx-auto px-4 scale-[0.9] lg:px-8">
             <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-primary-foreground/10">
               {stats.map((stat, index) => (
                 <div key={stat.label} className="py-3 lg:py-3 px-4 lg:px-8 text-center">

@@ -41,15 +41,17 @@ import CommissionsTab from './CommissionsTab';
 import ResultsTab from './ResultsTab';
 import PreselectionTab from './PreselectionTab';
 import PvGlobalTab from './PvGlobalTab';
+import Header from '../../components/layout/Header';
 
 // Import models
-import { Candidat } from '@/models/Candidat';
+import { Candidat, JoinedCandidate } from '@/models/Candidat';
 import { Sujet } from '@/models/Sujet';
 import { Commission } from '@/models/Commission';
 import { FormationDoctorale } from '@/models/FormationDoctorale';
 import { Examiner } from '@/models/Examiner';
 import { Professeur } from '@/models/Professeur';
 import { DirecteurLabo } from '@/models/DirecteurLabo';
+import { Diplome } from '@/models/Diplome';
 
 // Import services
 import { DirecteurLaboService } from '@/api/directeurLaboService';
@@ -70,12 +72,14 @@ const DirecteurLaboInterface: React.FC = () => {
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [formations, setFormations] = useState<FormationDoctorale[]>([]);
   const [results, setResults] = useState<Examiner[]>([]);
+  const [professeurs, setProfesseurs] = useState<Professeur[]>([]);
  
   // Dialog states
   const [isSujetDialogOpen, setIsSujetDialogOpen] = useState(false);
   const [isCommissionDialogOpen, setIsCommissionDialogOpen] = useState(false);
   const [isCandidateDetailDialogOpen, setIsCandidateDetailDialogOpen] = useState(false);
-  const [selectedCandidate, setSelectedCandidate] = useState<Candidat | null>(null);
+  const [selectedCandidate, setSelectedCandidate] = useState<JoinedCandidate | null>(null);
+  const [candidateDiplomes, setCandidateDiplomes] = useState<Diplome[]>([]);
   
   // Logout confirmation state
   const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
@@ -132,6 +136,7 @@ const DirecteurLaboInterface: React.FC = () => {
     }
     
     fetchAllData();
+    fetchProfesseurs(); // Fetch professors for dropdowns
   }, []);
 
   const fetchAllData = async () => {
@@ -151,7 +156,34 @@ const DirecteurLaboInterface: React.FC = () => {
   };
 
   const fetchCandidats = async () => {
-    
+    try {
+      // Note: This would require an appropriate API endpoint
+      // For now, we'll use the joined data approach since there doesn't seem to be a simple "get all candidats" endpoint
+      const response = await DirecteurLaboService.getJoinedCandidats();
+      
+      // Extract unique candidates from the joined data
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const uniqueCandidats = response.reduce((acc: Candidat[], item: any) => {
+        // Check if item and candidat exist and have cne
+        if (!item || !item.candidat || !item.candidat.cne) {
+          return acc;
+        }
+        
+        // Check if candidate already exists in accumulator
+        const exists = acc.some(c => c.cne === item.candidat.cne);
+        
+        if (!exists) {
+          acc.push(item.candidat);
+        }
+        
+        return acc;
+      }, []);
+      
+      setCandidats(uniqueCandidats);
+    } catch (error) {
+      console.error('Error fetching candidats:', error);
+      setCandidats([]); // Set to empty array on error
+    }
   };
 
   const fetchSujets = async () => {
@@ -178,19 +210,59 @@ const DirecteurLaboInterface: React.FC = () => {
   };
 
   const fetchCommissions = async () => {
-    
+    // try {
+    //   const response = await DirecteurLaboService.getAllCommissions();
+    //   console.log('Fetched commissions:', response);
+    //   setCommissions(response.results || []);
+    // } catch (error) {
+    //   console.error('Error fetching commissions:', error);
+    //   setCommissions([]);
+    // }
   };
+
 
   const fetchFormations = async () => {
-    
+    try {
+      const response = await DirecteurLaboService.getFormations();
+      console.log('Fetched formations:', response);
+      // The getFormations method returns an array directly
+      setFormations(response || []);
+    } catch (error) {
+      console.error('Error fetching formations:', error);
+      setFormations([]);
+    }
   };
-
+  const fetchProfesseurs = async () => {
+    try {
+      const response = await DirecteurLaboService.getProfesseurs();
+      console.log('Fetched professeurs:', response);
+      setProfesseurs(response || []);
+    } catch (error) {
+      console.error('Error fetching professeurs:', error);
+      setProfesseurs([]);
+    }
+  };
   const fetchResults = async () => {
-    
+    // try {
+    //   // Assuming there's an API to get examiner results
+    //   // Using the labo candidat service as it likely contains results
+    //   const response = await DirecteurLaboService.getLaboCandidats();
+    //   console.log('Fetched results:', response);
+    //   setResults(response.results || []);
+    // } catch (error) {
+    //   console.error('Error fetching results:', error);
+    //   setResults([]);
+    // }
   };
 
   const fetchJoinedCandidats = async () => {
-    
+    try {
+      const response = await DirecteurLaboService.getJoinedCandidats();
+      // We don't need to store this separately since it's used in the CandidatesTab
+      // Just log the data to confirm it's working
+    } catch (error) {
+      console.error('Error fetching joined candidats:', error);
+    }
   };
 
   const handleCreateSujet = async () => {
@@ -267,35 +339,106 @@ const DirecteurLaboInterface: React.FC = () => {
     setShowLogoutConfirmation(false);
   };
 
-  const handleViewCandidateDetails = (candidateId: number) => {
-    const candidate = candidats.find(c => c.id === candidateId);
-    if (candidate) {
-      setSelectedCandidate(candidate);
-      setIsCandidateDetailDialogOpen(true);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleViewCandidateDetails = async (candidateData: any) => {
+    // Check if we already have the candidate data in our local state
+    let completeCandidate = candidats.find(c => c.cne === candidateData.cne);
+    
+    if (!completeCandidate) {
+      // Fetch complete candidate data from the database if not found locally
+      try {
+        completeCandidate = await DirecteurLaboService.getCandidateByCNE(candidateData.cne);
+      } catch (error) {
+        console.error('Error fetching complete candidate data:', error);
+        // Use fallback candidate data if API call fails
+        completeCandidate = {
+          id: candidateData.id,
+          cne: candidateData.cne,
+          nom: candidateData.nom,
+          prenom: candidateData.prenom,
+          // Add other fields with default values since we don't have the full candidat data
+          pays: '',
+          email: '',
+          cin: '',
+          nomCandidatAr: undefined,
+          prenomCandidatAr: undefined,
+          adresse: '',
+          adresseAr: undefined,
+          sexe: '',
+          villeDeNaissance: '',
+          villeDeNaissanceAr: undefined,
+          ville: '',
+          dateDeNaissance: '',
+          typeDeHandiCape: '',
+          academie: undefined,
+          telCandidat: '',
+          pathCv: undefined,
+          pathPhoto: undefined,
+          etatDossier: undefined,
+          situation_familiale: undefined,
+          fonctionnaire: undefined
+        };
+      }
     }
+    
+    // Combine the complete candidate data with the joined data
+    const combinedCandidate: JoinedCandidate = {
+      ...completeCandidate,
+      sujetPostule: candidateData.sujetPostule,
+      directeurNom: candidateData.directeurNom,
+      directeurPrenom: candidateData.directeurPrenom,
+      codirecteurNom: candidateData.codirecteurNom || '',
+      codirecteurPrenom: candidateData.codirecteurPrenom || '',
+      formationDoctorale: candidateData.formationDoctorale,
+    };
+    
+    setSelectedCandidate(combinedCandidate);
+    
+    // Fetch diplomes for this candidate
+    try {
+      const diplomes = await DirecteurLaboService.getCandidateDiplomes(candidateData.cne);
+      setCandidateDiplomes(diplomes);
+    } catch (error) {
+      console.error('Error fetching candidate diplomes:', error);
+      setCandidateDiplomes([]); // Set empty array if there's an error
+    }
+    
+    setIsCandidateDetailDialogOpen(true);
   };
 
   // Filter functions
   const filteredCandidats = candidats.filter(candidat =>
-    candidat.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    candidat.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    candidat.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    candidat.cne.toLowerCase().includes(searchTerm.toLowerCase())
+    candidat && 
+    candidat.nom && 
+    candidat.prenom && 
+    candidat.email && 
+    candidat.cne && (
+      candidat.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      candidat.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      candidat.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      candidat.cne.toLowerCase().includes(searchTerm.toLowerCase())
+    )
   );
 
   const filteredSujets = sujets.filter(sujet =>
-    sujet.titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    sujet.description.toLowerCase().includes(searchTerm.toLowerCase())
+    sujet && 
+    sujet.titre && (
+      sujet.titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (sujet.description && sujet.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
   );
 
   const filteredCommissions = commissions.filter(commission =>
+    commission && commission.lieu && 
     commission.lieu.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredResults = results.filter(result =>
-    result.candidat?.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    result.candidat?.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    result.sujet?.titre.toLowerCase().includes(searchTerm.toLowerCase())
+    result && (
+      (result.candidat?.nom && result.candidat.nom.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (result.candidat?.prenom && result.candidat.prenom.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (result.sujet?.titre && result.sujet.titre.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
   );
 
   const getDecisionBadge = (decision: string) => {
@@ -327,12 +470,12 @@ const DirecteurLaboInterface: React.FC = () => {
     );
   };
 
-    return (
-    <Layout>
-      <div className="min-h-screen bg-background">
-        <Header />
+  return (
+    
+    <div className="min-h-screen bg-background">
+      <Header />
         {/* Header Section */}
-        <section className="py-8 lg:py-12 bg-gradient-to-r from-primary/5 to-secondary/5">
+        <section className="py-8 lg:py-16 bg-gradient-to-r from-primary/5 to-secondary/5 mt-20">
           <div className="container mx-auto px-4 lg:px-8">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -348,66 +491,65 @@ const DirecteurLaboInterface: React.FC = () => {
             </motion.div>
           </div>
         </section>
-
-        <div className="container mx-auto px-4 lg:px-8 py-8">
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <GraduationCap className="w-6 h-6" />
-                Actions Directeur de Laboratoire
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-                <Button
-                  variant={activeTab === 'candidats' ? 'default' : 'outline'}
-                  onClick={() => setActiveTab('candidats')}
-                  className="flex items-center gap-2"
-                >
-                  <Users className="w-4 h-4" />
-                  Candidats
-                </Button>
-                <Button
-                  variant={activeTab === 'sujets' ? 'default' : 'outline'}
-                  onClick={() => setActiveTab('sujets')}
-                  className="flex items-center gap-2"
-                >
-                  <BookOpen className="w-4 h-4" />
-                  Sujets
-                </Button>
-                <Button
-                  variant={activeTab === 'commissions' ? 'default' : 'outline'}
-                  onClick={() => setActiveTab('commissions')}
-                  className="flex items-center gap-2"
-                >
-                  <Calendar className="w-4 h-4" />
-                  Commissions
-                </Button>
-                <Button
-                  variant={activeTab === 'preselection' ? 'default' : 'outline'}
-                  onClick={() => setActiveTab('preselection')}
-                  className="flex items-center gap-2"
-                >
-                  <UserCheck className="w-4 h-4" />
-                  Présélection
-                </Button>
-                <Button
-                  variant={activeTab === 'resultats' ? 'default' : 'outline'}
-                  onClick={() => setActiveTab('resultats')}
-                  className="flex items-center gap-2"
-                >
-                  <FileText className="w-4 h-4" />
-                  Résultats
-                </Button>
-                <Button
-                  variant={activeTab === 'pv' ? 'default' : 'outline'}
-                  onClick={() => setActiveTab('pv')}
-                  className="flex items-center gap-2"
-                >
-                  <Download className="w-4 h-4" />
-                  PV Global
-                </Button>
-              </div>
+      <div className="container mx-auto px-4 lg:px-8 py-8">
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <GraduationCap className="w-6 h-6" />
+              Actions Directeur de Laboratoire
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+              <Button
+                variant={activeTab === 'candidats' ? 'default' : 'outline'}
+                onClick={() => setActiveTab('candidats')}
+                className="flex items-center gap-2"
+              >
+                <Users className="w-4 h-4" />
+                Candidats
+              </Button>
+              <Button
+                variant={activeTab === 'sujets' ? 'default' : 'outline'}
+                onClick={() => setActiveTab('sujets')}
+                className="flex items-center gap-2"
+              >
+                <BookOpen className="w-4 h-4" />
+                Sujets
+              </Button>
+              <Button
+                variant={activeTab === 'commissions' ? 'default' : 'outline'}
+                onClick={() => setActiveTab('commissions')}
+                className="flex items-center gap-2"
+              >
+                <Calendar className="w-4 h-4" />
+                Commissions
+              </Button>
+              <Button
+                variant={activeTab === 'preselection' ? 'default' : 'outline'}
+                onClick={() => setActiveTab('preselection')}
+                className="flex items-center gap-2"
+              >
+                <UserCheck className="w-4 h-4" />
+                Présélection
+              </Button>
+              <Button
+                variant={activeTab === 'resultats' ? 'default' : 'outline'}
+                onClick={() => setActiveTab('resultats')}
+                className="flex items-center gap-2"
+              >
+                <FileText className="w-4 h-4" />
+                Résultats
+              </Button>
+              <Button
+                variant={activeTab === 'pv' ? 'default' : 'outline'}
+                onClick={() => setActiveTab('pv')}
+                className="flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                PV Global
+              </Button>
+            </div>
 
               <div className="flex flex-col sm:flex-row gap-4 mb-6">
                 <div className="relative flex-1">
@@ -456,14 +598,13 @@ const DirecteurLaboInterface: React.FC = () => {
                     />
                   )}
 
-                  {activeTab === 'commissions' && (
-                    <CommissionsTab 
-                      commissions={commissions}
-                      searchTerm={searchTerm}
-                      onCreateCommission={() => setIsCommissionDialogOpen(true)}
-                      onValidateCommission={handleValidateCommission}
-                    />
-                  )}
+                {activeTab === 'commissions' && (
+                  <CommissionsTab 
+                    searchTerm={searchTerm}
+                    onCreateCommission={() => setIsCommissionDialogOpen(true)}
+                    onValidateCommission={handleValidateCommission}
+                  />
+                )}
 
                   {activeTab === 'preselection' && (
                     <PreselectionTab onSendInvitations={function (): void {
@@ -517,23 +658,61 @@ const DirecteurLaboInterface: React.FC = () => {
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="directeur" className="text-right">Directeur</Label>
-              <Input 
-                id="directeur" 
+              <Select
                 value={sujetFormData.directeur}
-                onChange={(e) => setSujetFormData({...sujetFormData, directeur: e.target.value})}
-                className="col-span-3" 
-                placeholder="Nom du directeur"
-              />
+                onValueChange={(value) => setSujetFormData({...sujetFormData, directeur: value})}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Sélectionner un directeur" />
+                </SelectTrigger>
+                <SelectContent>
+                {Array.isArray(professeurs) &&
+                  professeurs
+                    .filter(
+                      (professeur) =>
+                        String(professeur.id) !== sujetFormData.coDirecteur
+                    )
+                    .map((professeur) => (
+                      <SelectItem
+                        key={professeur.id}
+                        value={String(professeur.id)}
+                      >
+                        {professeur.prenom} {professeur.nom}
+                      </SelectItem>
+                    ))
+                }
+              </SelectContent>
+
+              </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="coDirecteur" className="text-right">Co-directeur</Label>
-              <Input 
-                id="coDirecteur" 
+              <Select
                 value={sujetFormData.coDirecteur}
-                onChange={(e) => setSujetFormData({...sujetFormData, coDirecteur: e.target.value})}
-                className="col-span-3" 
-                placeholder="Nom du co-directeur (optionnel)"
-              />
+                onValueChange={(value) => setSujetFormData({...sujetFormData, coDirecteur: value})}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Sélectionner un co-directeur (optionnel)" />
+                </SelectTrigger>
+                <SelectContent>
+                {Array.isArray(professeurs) &&
+                  professeurs
+                    .filter(
+                      (professeur) =>
+                        String(professeur.id) !== sujetFormData.directeur
+                    )
+                    .map((professeur) => (
+                      <SelectItem
+                        key={professeur.id}
+                        value={String(professeur.id)}
+                      >
+                        {professeur.prenom} {professeur.nom}
+                      </SelectItem>
+                    ))
+                }
+              </SelectContent>
+
+              </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="formation" className="text-right">Formation Doctorale</Label>
@@ -545,12 +724,18 @@ const DirecteurLaboInterface: React.FC = () => {
                   <SelectValue placeholder="Sélectionner une formation" />
                 </SelectTrigger>
                 <SelectContent>
-                  {formations.map(formation => (
-                    <SelectItem key={formation.id} value={String(formation.id)}>
+                {Array.isArray(formations) &&
+                  formations.map((formation) => (
+                    <SelectItem
+                      key={formation.id}
+                      value={String(formation.id)}
+                    >
                       {formation.titre}
                     </SelectItem>
-                  ))}
-                </SelectContent>
+                  ))
+                }
+              </SelectContent>
+
               </Select>
             </div>
           </div>
@@ -614,245 +799,220 @@ const DirecteurLaboInterface: React.FC = () => {
           </DialogHeader>
           {selectedCandidate && (
             <div className="space-y-6 py-4">
-              {/* Section identité */}
-              <div className="bg-gray-50 p-6 rounded-lg">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">Informations Personnelles</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">CNE</Label>
-                    <div className="text-base font-semibold text-gray-900">{selectedCandidate.cne}</div>
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">CIN</Label>
-                    <div className="text-base text-gray-900">{selectedCandidate.cin}</div>
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">État du dossier</Label>
-                    <div>
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                        selectedCandidate.etatDossier === 1 ? 'bg-green-100 text-green-800' : 
-                        selectedCandidate.etatDossier === 0 ? 'bg-yellow-100 text-yellow-800' : 
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {selectedCandidate.etatDossier === 1 ? 'Validé' : 
-                         selectedCandidate.etatDossier === 0 ? 'En cours' : 'Refusé'}
-                      </span>
+              {/* Section avec photo et informations principales */}
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-8 rounded-xl shadow-sm">
+                <div className="flex flex-col md:flex-row gap-8">
+                  {/* Photo du candidat */}
+                  <div className="flex-shrink-0">
+                    <div className="relative w-48 h-48 mx-auto md:mx-0">
+                      <div className="w-full h-full rounded-2xl overflow-hidden shadow-lg border-4 border-white">
+                        {selectedCandidate.pathPhoto ? (
+                          <img 
+                            src={selectedCandidate.pathPhoto} 
+                            alt={`${selectedCandidate.prenom} ${selectedCandidate.nom}`}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center">
+                            <span className="text-6xl font-bold text-white">
+                              {selectedCandidate.prenom.charAt(0)}{selectedCandidate.nom.charAt(0)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      {/* Badge état du dossier */}
+                      <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2">
+                        <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold shadow-md ${
+                          selectedCandidate.etatDossier === 1 ? 'bg-green-500 text-white' : 
+                          selectedCandidate.etatDossier === 0 ? 'bg-yellow-500 text-white' : 
+                          'bg-red-500 text-white'
+                        }`}>
+                          {selectedCandidate.etatDossier === 1 ? '✓ Validé' : 
+                          selectedCandidate.etatDossier === 0 ? '⏳ En cours' : '✗ Refusé'}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Nom</Label>
-                    <div className="text-base text-gray-900">{selectedCandidate.nom}</div>
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Prénom</Label>
-                    <div className="text-base text-gray-900">{selectedCandidate.prenom}</div>
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Email</Label>
-                    <div className="text-base text-gray-900 truncate">{selectedCandidate.email}</div>
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Pays</Label>
-                    <div className="text-base text-gray-900">{selectedCandidate.pays}</div>
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Ville</Label>
-                    <div className="text-base text-gray-900">{selectedCandidate.ville}</div>
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Sexe</Label>
-                    <div className="text-base text-gray-900">{selectedCandidate.sexe}</div>
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Date de naissance</Label>
-                    <div className="text-base text-gray-900">{new Date(selectedCandidate.dateDeNaissance).toLocaleDateString()}</div>
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Téléphone</Label>
-                    <div className="text-base text-gray-900">{selectedCandidate.telCandidat}</div>
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Adresse</Label>
-                    <div className="text-base text-gray-900">{selectedCandidate.adresse}</div>
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Situation familiale</Label>
-                    <div className="text-base text-gray-900">{selectedCandidate.situation_familiale || 'Non spécifié'}</div>
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Fonctionnaire</Label>
-                    <div className="text-base text-gray-900">{selectedCandidate.fonctionnaire || 'Non spécifié'}</div>
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Type de handicap</Label>
-                    <div className="text-base text-gray-900">{selectedCandidate.typeDeHandiCape}</div>
-                  </div>
-                  {selectedCandidate.academie && (
+
+                  {/* Informations principales */}
+                  <div className="flex-1 space-y-6">
                     <div>
-                      <Label className="block text-sm font-medium text-gray-700 mb-1">Académie</Label>
-                      <div className="text-base text-gray-900">{selectedCandidate.academie}</div>
+                      <h3 className="text-3xl font-bold text-gray-900 mb-1">
+                        {selectedCandidate.prenom} {selectedCandidate.nom}
+                      </h3>
+                      <p className="text-lg text-gray-600">{selectedCandidate.email}</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-sm">
+                        <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">CNE</Label>
+                        <div className="text-lg font-bold text-indigo-600">{selectedCandidate.cne}</div>
+                      </div>
+                      <div className="bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-sm">
+                        <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">CIN</Label>
+                        <div className="text-lg font-bold text-gray-900">{selectedCandidate.cin}</div>
+                      </div>
+                      <div className="bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-sm">
+                        <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">Téléphone</Label>
+                        <div className="text-lg font-bold text-gray-900">{selectedCandidate.telCandidat}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section informations personnelles détaillées */}
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 className="text-xl font-semibold text-gray-800 mb-6 pb-3 border-b-2 border-indigo-100 flex items-center gap-2">
+                  <div className="w-1 h-6 bg-indigo-600 rounded-full"></div>
+                  Informations Personnelles
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium text-gray-500">Sexe</Label>
+                    <div className="text-base font-semibold text-gray-900">{selectedCandidate.sexe}</div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium text-gray-500">Date de naissance</Label>
+                    <div className="text-base font-semibold text-gray-900">
+                      {new Date(selectedCandidate.dateDeNaissance).toLocaleDateString('fr-FR', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      })}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium text-gray-500">Ville de naissance</Label>
+                    <div className="text-base font-semibold text-gray-900">{selectedCandidate.villeDeNaissance}</div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium text-gray-500">Pays</Label>
+                    <div className="text-base font-semibold text-gray-900">{selectedCandidate.pays}</div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium text-gray-500">Ville</Label>
+                    <div className="text-base font-semibold text-gray-900">{selectedCandidate.ville}</div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium text-gray-500">Situation familiale</Label>
+                    <div className="text-base font-semibold text-gray-900">{selectedCandidate.situation_familiale || 'Non spécifié'}</div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium text-gray-500">Fonctionnaire</Label>
+                    <div className="text-base font-semibold text-gray-900">
+                      {selectedCandidate.fonctionnaire === 'true' ? 'Oui' : selectedCandidate.fonctionnaire === 'false' ? 'Non' : 'Non spécifié'}
+                    </div>
+                  </div>
+                  {selectedCandidate.typeDeHandiCape && (
+                    <div className="space-y-1">
+                      <Label className="text-sm font-medium text-gray-500">Type de handicap</Label>
+                      <div className="text-base font-semibold text-gray-900">{selectedCandidate.typeDeHandiCape}</div>
                     </div>
                   )}
+                  {selectedCandidate.academie && (
+                    <div className="space-y-1">
+                      <Label className="text-sm font-medium text-gray-500">Académie</Label>
+                      <div className="text-base font-semibold text-gray-900">{selectedCandidate.academie}</div>
+                    </div>
+                  )}
+                  <div className="md:col-span-2 lg:col-span-3 space-y-1">
+                    <Label className="text-sm font-medium text-gray-500">Adresse</Label>
+                    <div className="text-base font-semibold text-gray-900">{selectedCandidate.adresse}</div>
+                  </div>
                 </div>
               </div>
-              
-              {/* Section sujet de recherche */}
-              <div className="bg-blue-50 p-6 rounded-lg">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">Sujet de Recherche</h3>
-                <div className="space-y-6">
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Sujet de Recherche</Label>
-                    <div className="text-base text-gray-900 bg-white p-3 rounded border">
-                      {/* {selectedCandidate ? (
-                        (() => {
-                          // Find the joined data for this candidate
-                          const joinedData = joinedCandidats.find(j => j.cne === selectedCandidate.cne);
-                          return joinedData?.sujetPostule || 'Aucun sujet attribué';
-                        })()
-                      ) : (
-                        'Aucun sujet attribué'
-                      )} */}
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+              {/* Section sujet postulé */}
+              {selectedCandidate.sujetPostule && (
+                <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-xl shadow-sm border border-purple-100">
+                  <h3 className="text-xl font-semibold text-gray-800 mb-4 pb-3 border-b-2 border-purple-200 flex items-center gap-2">
+                    <div className="w-1 h-6 bg-purple-600 rounded-full"></div>
+                    Candidature
+                  </h3>
+                  <div className="space-y-4">
                     <div>
-                      <Label className="block text-sm font-medium text-gray-700 mb-1">Directeur de Thèse</Label>
-                      <div className="text-base text-gray-900 bg-white p-3 rounded border">
-                        {/* {selectedCandidate ? (
-                          (() => {
-                            // Find the joined data for this candidate
-                            const joinedData = joinedCandidats.find(j => j.cne === selectedCandidate.cne);
-                            return `${joinedData?.directeurNom || ''} ${joinedData?.directeurPrenom || ''}`.trim() || 'Aucun directeur attribué';
-                          })()
-                        ) : (
-                          'Aucun directeur attribué'
-                        )} */}
+                      <Label className="text-sm font-medium text-gray-600 block mb-2">Sujet postulé</Label>
+                      <div className="text-lg font-bold text-gray-900 bg-white/60 p-4 rounded-lg">
+                        {selectedCandidate.sujetPostule}
                       </div>
                     </div>
-                    <div>
-                      <Label className="block text-sm font-medium text-gray-700 mb-1">Co-Directeur</Label>
-                      <div className="text-base text-gray-900 bg-white p-3 rounded border">
-                        {/* {selectedCandidate ? (
-                          (() => {
-                            // Find the joined data for this candidate
-                            const joinedData = joinedCandidats.find(j => j.cne === selectedCandidate.cne);
-                            return `${joinedData?.codirecteurNom || ''} ${joinedData?.codirecteurPrenom || ''}`.trim() || 'Aucun co-directeur attribué';
-                          })()
-                        ) : (
-                          'Aucun co-directeur attribué'
-                        )} */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-white/60 p-4 rounded-lg">
+                        <Label className="text-sm font-medium text-gray-600 block mb-2">Directeur de thèse</Label>
+                        <div className="text-base font-semibold text-gray-900">
+                          {selectedCandidate.directeurPrenom} {selectedCandidate.directeurNom}
+                        </div>
                       </div>
+                      {selectedCandidate.codirecteurNom && (
+                        <div className="bg-white/60 p-4 rounded-lg">
+                          <Label className="text-sm font-medium text-gray-600 block mb-2">Co-directeur</Label>
+                          <div className="text-base font-semibold text-gray-900">
+                            {selectedCandidate.codirecteurPrenom} {selectedCandidate.codirecteurNom}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 mb-1">Formation Doctorale</Label>
-                    <div className="text-base text-gray-900 bg-white p-3 rounded border">
-                      {/* {selectedCandidate ? (
-                        (() => {
-                          // Find the joined data for this candidate
-                          const joinedData = joinedCandidats.find(j => j.cne === selectedCandidate.cne);
-                          return joinedData?.formationDoctorale || 'Aucune formation attribuée';
-                        })()
-                      ) : (
-                        'Aucune formation attribuée'
-                      )} */}
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                      <Label className="block text-sm font-medium text-gray-700 mb-1">Date de Dépôt</Label>
-                      <div className="text-base text-gray-900 bg-white p-3 rounded border">
-                        {/* {selectedCandidate ? (
-                          (() => {
-                            // Find the joined data for this candidate
-                            const joinedData = joinedCandidats.find(j => j.cne === selectedCandidate.cne);
-                            return joinedData?.dateDepot || 'Non spécifiée';
-                          })()
-                        ) : (
-                          'Non spécifiée'
-                        )} */}
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="block text-sm font-medium text-gray-700 mb-1">Statut Publication</Label>
-                      <div>
-                        {/*<span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                          selectedCandidate ? (
-                            (() => {
-                              // Find the joined data for this candidate
-                              const joinedData = joinedCandidats.find(j => j.cne === selectedCandidate.cne);
-                              return joinedData?.publier ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
-                            })()
-                          ) : (
-                            'bg-gray-100 text-gray-800'
-                          )
-                        }`}>
-                          {selectedCandidate ? (
-                            (() => {
-                              // Find the joined data for this candidate
-                              const joinedData = joinedCandidats.find(j => j.cne === selectedCandidate.cne);
-                              return joinedData?.publier ? 'Publié' : 'Non publié';
-                            })()
-                          ) : (
-                            'Non publié'
-                          )}
-                        </span>*/}
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="block text-sm font-medium text-gray-700 mb-1">Mots-clés</Label>
-                      <div className="text-base text-gray-900 bg-white p-3 rounded border">
-                        {/* {selectedCandidate ? (
-                          (() => {
-                            // Find the joined data for this candidate
-                            const joinedData = joinedCandidats.find(j => j.cne === selectedCandidate.cne);
-                            return joinedData?.motsCles || 'Aucun mot-clé défini';
-                          })()
-                        ) : (
-                          'Aucun mot-clé défini'
-                        )} */}
+                    <div className="bg-white/60 p-4 rounded-lg">
+                      <Label className="text-sm font-medium text-gray-600 block mb-2">Formation doctorale</Label>
+                      <div className="text-base font-semibold text-gray-900">
+                        {selectedCandidate.formationDoctorale}
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
               
               {/* Section diplômes */}
-              <div className="bg-purple-50 p-6 rounded-lg">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">Diplômes et Formation Antérieure</h3>
-                <div className="space-y-4">
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 className="text-xl font-semibold text-gray-800 mb-6 pb-3 border-b-2 border-green-100 flex items-center gap-2">
+                  <div className="w-1 h-6 bg-green-600 rounded-full"></div>
+                  Diplômes et Formation Antérieure
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Diplôme</th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Spécialité</th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Établissement</th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Année</th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Moyenne</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-100">
+                      {candidateDiplomes && candidateDiplomes.length > 0 ? (
+                        candidateDiplomes.map((diplome, index) => (
+                          <tr key={diplome.id} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-6 py-4 text-sm font-semibold text-gray-900">{diplome.intitule}</td>
+                            <td className="px-6 py-4 text-sm text-gray-700">{diplome.specialite}</td>
+                            <td className="px-6 py-4 text-sm text-gray-700">{diplome.etablissement}</td>
+                            <td className="px-6 py-4 text-sm text-gray-700">
+                              {diplome.dateCommission ? new Date(diplome.dateCommission).getFullYear() : 'N/A'}
+                            </td>
+                            <td className="px-6 py-4 text-sm">
+                              <span className={`font-semibold ${
+                                diplome.moyen_generale && diplome.moyen_generale >= 14 ? 'text-green-600' :
+                                diplome.moyen_generale && diplome.moyen_generale >= 12 ? 'text-blue-600' :
+                                'text-gray-600'
+                              }`}>
+                                {diplome.moyen_generale ? `${diplome.moyen_generale}/20` : 'N/A'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
                         <tr>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diplôme</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Spécialité</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Établissement</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Année</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Moyenne</th>
+                          <td colSpan={5} className="px-6 py-8 text-center">
+                            <div className="text-gray-400 text-sm">
+                              <BookOpen className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                              Aucun diplôme enregistré
+                            </div>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        <tr>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Master en Informatique</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Génie Logiciel</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Université Sidi Mohamed Ben Abdellah</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">2022</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">16.5/20</td>
-                        </tr>
-                        <tr>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Licence en Sciences</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Informatique</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Université Sidi Mohamed Ben Abdellah</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">2020</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">15.2/20</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
@@ -862,7 +1022,7 @@ const DirecteurLaboInterface: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
-    </Layout>
+    </div>
   );
 };
 

@@ -36,6 +36,7 @@ public class CandidatResponse {
     private String pathCv;
     private String pathPhoto;
     private Integer etatDossier;
+    private String commentaireScolarite;
     
     @JsonProperty("situation_familiale")
     private String situationFamiliale;

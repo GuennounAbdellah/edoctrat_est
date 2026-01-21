@@ -5,6 +5,13 @@ import { Commission } from '@/models/Commission';
 import { FormationDoctorale } from '@/models/FormationDoctorale';
 import { Examiner } from '@/models/Examiner';
 import { Professeur } from '@/models/Professeur';
+import { Diplome } from '@/models/Diplome';
+import { CandidatResponse } from '@/models/CandidatResponse';
+import { FullCandidatResponse } from '@/models/FullCandidatResponse';
+import { SujetResponse } from '@/models/SujetResponse';
+import { CommissionResponse } from '@/models/CommissionResponse';
+import { ExaminerResponse } from '@/models/ExaminerResponse';
+import { PostulerJoinedResponse } from '@/models/PostulerJoinedResponse';
 
 // Response interfaces matching backend DTOs
 interface BaseResponse<T> {
@@ -21,87 +28,13 @@ interface ResultResponse<T> {
   results: T[];
 }
 
-interface CandidatResponse {
-    id: number;
-    cne: string;
-    pays: string;
-    nom: string;
-    prenom: string;
-    email: string;
-    cin: string;
-    nomCandidatAr: string | undefined;
-    prenomCandidatAr: string | undefined;
-    adresse: string;
-    adresseAr: string | undefined;
-    sexe: string;
-    villeDeNaissance: string;
-    villeDeNaissanceAr: string | undefined;
-    ville: string;
-    dateDeNaissance: string;
-    typeDeHandiCape: string;
-    academie: string | undefined;
-    telCandidat: string;
-    pathCv: string | undefined;
-    pathPhoto: string | undefined;
-    etatDossier: number | undefined;
-    situation_familiale: string | undefined;
-    fonctionnaire: string | undefined;
-    sujetPostule: string;
-    directeurNom: string;
-    directeurPrenom: string;
-    codirecteurNom: string;       // Peut être null
-    codirecteurPrenom: string;    // Peut être null
-    formationDoctorale: string;
+interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
 }
 
-interface SujetResponse {
-  id: number;
-  titre: string;
-  description: string;
-  motsCles: string;
-  dateDepot: string;
-  publier: boolean;
-  pathFile: string;
-  professeur: Professeur;
-  formationDoctorale: FormationDoctorale;
-  coDirecteur?: Professeur | null;  // Optional coDirecteur field from backend
-}
-
-interface CommissionResponse {
-  id: number;
-  dateCommission: string;
-  heure: string;
-  valider: boolean;
-  lieu: string;
-  labo: number;
-  participants: unknown[];
-  sujets: unknown[];
-}
-
-interface ExaminerResponse {
-  id: number;
-  sujet: Sujet;
-  cne: string;
-  noteDossier: number;
-  noteEntretien: number;
-  decision: string;
-  commission: number;
-  candidat: Candidat;
-  publier: boolean;
-}
-
-interface PostulerJoinedResponse {
-  id: number;
-  cne: string;
-  nom: string;
-  prenom: string;
-  sujetPostule: string;
-  directeurNom: string;
-  directeurPrenom: string;
-  codirecteurNom: string;
-  codirecteurPrenom: string;
-  formationDoctorale: string;
-}
 
 export const DirecteurLaboService = {
 
@@ -120,7 +53,6 @@ export const DirecteurLaboService = {
   getAllSujets: async (): Promise<ResultResponse<SujetResponse>> => {
     try {
       const response = await apiClient.get<ResultResponse<SujetResponse>>('/api/sujetslabo/');
-      console.log('getAllSujets response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching sujets:', error);
@@ -281,7 +213,6 @@ export const DirecteurLaboService = {
   getJoinedCandidats: async (): Promise<PostulerJoinedResponse[]> => {
     try {
       const response = await apiClient.get<PostulerJoinedResponse[]>('/api/labo-candidats-joined/');
-      console.log('getJoinedCandidats response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching joined candidat data:', error);
@@ -293,6 +224,7 @@ export const DirecteurLaboService = {
   getFormations: async (): Promise<FormationDoctorale[]> => {
     try {
       const response = await apiClient.get<FormationDoctorale[]>('/api/formations/');
+      console.log('getFormations response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching formations:', error);
@@ -300,4 +232,92 @@ export const DirecteurLaboService = {
     }
   },
 
-};
+  // Get complete candidate by CNE
+  getCandidateByCNE: async (cne: string): Promise<Candidat> => {
+    try {
+      // Attempt to get candidate info - this endpoint depends on authentication
+      const response = await apiClient.get<FullCandidatResponse>(`/api/get-candidat-by-cne/${cne}`);
+      // Map the response to the Candidat interface
+      const candidat: Candidat = {
+        id: response.data.id,
+        cne: response.data.cne,
+        pays: response.data.pays,
+        nom: response.data.nom,
+        prenom: response.data.prenom,
+        email: response.data.email,
+        cin: response.data.cin,
+        nomCandidatAr: response.data.nomCandidatAr,
+        prenomCandidatAr: response.data.prenomCandidatAr,
+        adresse: response.data.adresse,
+        adresseAr: response.data.adresseAr,
+        sexe: response.data.sexe,
+        villeDeNaissance: response.data.villeDeNaissance,
+        villeDeNaissanceAr: response.data.villeDeNaissanceAr,
+        ville: response.data.ville,
+        dateDeNaissance: response.data.dateDeNaissance,
+        typeDeHandiCape: response.data.typeDeHandiCape,
+        academie: response.data.academie,
+        telCandidat: response.data.telCandidat,
+        pathCv: response.data.pathCv,
+        pathPhoto: response.data.pathPhoto,
+        etatDossier: response.data.etatDossier,
+        situation_familiale: response.data.situation_familiale,
+        fonctionnaire: response.data.fonctionnaire
+      };
+      return candidat;
+    } catch (error) {
+      console.error('Error fetching candidate by CNE:', error);
+      // Return a minimal candidate object as fallback with the provided CNE
+      return {
+        id: 0,
+        cne: cne,
+        pays: '',
+        nom: 'Nom inconnu',
+        prenom: 'Prénom inconnu',
+        email: '',
+        cin: '',
+        nomCandidatAr: undefined,
+        prenomCandidatAr: undefined,
+        adresse: '',
+        adresseAr: undefined,
+        sexe: '',
+        villeDeNaissance: '',
+        villeDeNaissanceAr: undefined,
+        ville: '',
+        dateDeNaissance: '',
+        typeDeHandiCape: '',
+        academie: undefined,
+        telCandidat: '',
+        pathCv: undefined,
+        pathPhoto: undefined,
+        etatDossier: undefined,
+        situation_familiale: undefined,
+        fonctionnaire: undefined
+      };
+    }
+  },
+  
+  // Get diplomes for a specific candidate
+  getCandidateDiplomes: async (cne: string): Promise<Diplome[]> => {
+    try {
+      const response = await apiClient.get<{results: Diplome[]}>('/api/get-candidat-diplome-by-cne/' + cne);
+      // Extract the diplomes from the paginated response
+      return response.data.results || [];
+    } catch (error) {
+      console.error('Error fetching candidate diplomes:', error);
+      throw error;
+    }
+  },
+
+  //GET all professeurs
+  getProfesseurs: async (): Promise<Professeur[]> => {
+    try {
+      const response = await apiClient.get<Professeur[]>('/api/get-professeurs/');
+      console.log('getProfesseurs response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching professeurs:', error);
+      throw error;
+    }
+  },
+}

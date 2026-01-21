@@ -25,3 +25,13 @@ export interface Candidat {
   fonctionnaire: string | undefined;
 
 }
+
+// Extended interface for joined candidate data
+export interface JoinedCandidate extends Candidat {
+  sujetPostule: string;
+  directeurNom: string;
+  directeurPrenom: string;
+  codirecteurNom: string;
+  codirecteurPrenom: string;
+  formationDoctorale: string;
+}

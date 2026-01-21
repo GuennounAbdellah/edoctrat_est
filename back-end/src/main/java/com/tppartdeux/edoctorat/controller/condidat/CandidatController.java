@@ -2,6 +2,7 @@ package com.tppartdeux.edoctorat.controller.condidat;
 
 import com.tppartdeux.edoctorat.dto.professeur.ConfigResponse;
 import com.tppartdeux.edoctorat.dto.ResultDTO;
+import com.tppartdeux.edoctorat.dto.candidat.CandidatDTO;
 import com.tppartdeux.edoctorat.dto.candidat.CandidatResponse;
 import com.tppartdeux.edoctorat.dto.candidat.DiplomeResponse;
 import com.tppartdeux.edoctorat.dto.professeur.PostulerResponse;
@@ -38,6 +39,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:8081")
 public class CandidatController {
 
     private final CandidatService candidatService;
@@ -446,4 +448,49 @@ public class CandidatController {
         return ResponseEntity.ok(ResultDTO.of(notifications));
     }
 
+    // GET candidat by CNE
+    @GetMapping("/get-candidat-by-cne/{cne}")
+    public ResponseEntity<CandidatDTO> getCandidatByCne(@PathVariable String cne) {
+        Candidat candidat = candidatService.findByCne(cne).orElse(null);
+        if (candidat == null) {
+            return ResponseEntity.notFound().build();
+        }
+        System.out.println(candidat);
+        return ResponseEntity.ok(dtoMapper.toCandidatDTO(candidat));
+    }
+
+    // GET candidat diplome by cne
+    @GetMapping("/get-candidat-diplome-by-cne/{cne}")
+    public ResponseEntity<ResultDTO<DiplomeResponse>> getCandidatDiplomeByCne(
+            @PathVariable String cne,
+            @RequestParam(defaultValue = "10") Integer limit,
+            @RequestParam(defaultValue = "0") Integer offset) {
+
+        Candidat candidat = candidatService.findByCne(cne).orElse(null);
+        if (candidat == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        List<Diplome> diplomes = diplomeService.findByCandidat(candidat);
+
+        // Apply pagination
+        int start = Math.min(offset, diplomes.size());
+        int end = Math.min(start + limit, diplomes.size());
+
+        List<Diplome> paginatedDiplomes = diplomes.subList(start, end);
+        List<DiplomeResponse> responses = paginatedDiplomes.stream()
+                .map(d -> dtoMapper.toDiplomeResponse(d, Collections.emptyList()))
+                .collect(Collectors.toList());
+
+        String next = end < diplomes.size()
+                ? "/api/get-candidat-diplome-by-cne/" + cne + "?limit=" + limit + "&offset=" + end
+                : null;
+
+        String previous = start > 0
+                ? "/api/get-candidat-diplome-by-cne/" + cne + "?limit=" + limit + "&offset="
+                        + Math.max(0, start - limit)
+                : null;
+
+        return ResponseEntity.ok(ResultDTO.of(responses, diplomes.size(), next, previous));
+    }
 }
