@@ -18,7 +18,7 @@ import {
   ResultatsPage as CedResultatsPage,
   InscritsPage as CedInscritsPage
 } from "./pages/directeur-ced/pages";
-import DirecteurLabo from "./pages/directeur-labo/DirecteurLabo";
+import DirecteurLaboInterface from "./pages/directeur-labo/DirecteurLabo";
 
 import Scolarite from "./pages/scolarite/Scolarite";
 import ProfesseurLayout from "./pages/professeur/ProfesseurLayout";
@@ -82,7 +82,7 @@ const App = () => (
             <Route path="inscrits" element={<CedInscritsPage />} />
           </Route>
           
-          <Route path="/labo-dashboard" element={<DirecteurLabo />} />
+          <Route path="/labo-dashboard" element={<DirecteurLaboInterface />} />
           <Route path="/scolarite-dashboard" element={<Scolarite />} />
           
           {/* Professeur nested routes */}

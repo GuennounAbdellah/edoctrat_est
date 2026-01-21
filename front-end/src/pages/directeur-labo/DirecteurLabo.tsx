@@ -41,6 +41,7 @@ import CommissionsTab from './CommissionsTab';
 import ResultsTab from './ResultsTab';
 import PreselectionTab from './PreselectionTab';
 import PvGlobalTab from './PvGlobalTab';
+import Header from '../../components/layout/Header';
 
 // Import models
 import { Candidat, JoinedCandidate } from '@/models/Candidat';
@@ -54,8 +55,6 @@ import { Diplome } from '@/models/Diplome';
 
 // Import services
 import { DirecteurLaboService } from '@/api/directeurLaboService';
-import Layout from '@/components/layout/Layout';
-import Header from '@/components/layout/Header';
 
 const DirecteurLaboInterface: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'candidats' | 'sujets' | 'commissions' | 'preselection' | 'resultats' | 'pv'>('candidats');
@@ -550,52 +549,52 @@ const DirecteurLaboInterface: React.FC = () => {
               </Button>
             </div>
 
-              <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Rechercher..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                {activeTab === 'sujets' && (
-                  <Button onClick={() => setIsSujetDialogOpen(true)} className="flex items-center gap-2">
-                    <Plus className="w-4 h-4" />
-                    Ajouter un sujet
-                  </Button>
-                )}
-                {activeTab === 'commissions' && (
-                  <Button onClick={() => setIsCommissionDialogOpen(true)} className="flex items-center gap-2">
-                    <Plus className="w-4 h-4" />
-                    Créer une commission
-                  </Button>
-                )}
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Rechercher..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
               </div>
-
-              {loading && (
-                <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                </div>
+              {activeTab === 'sujets' && (
+                <Button onClick={() => setIsSujetDialogOpen(true)} className="flex items-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  Ajouter un sujet
+                </Button>
               )}
+              {activeTab === 'commissions' && (
+                <Button onClick={() => setIsCommissionDialogOpen(true)} className="flex items-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  Créer une commission
+                </Button>
+              )}
+            </div>
 
-              {!loading && (
-                <div className="overflow-x-auto">
-                  {activeTab === 'candidats' && (
-                    <CandidatesTab 
-                      // candidats={candidats}
-                      searchTerm={searchTerm}
-                      onViewCandidateDetails={handleViewCandidateDetails}
-                    />
-                  )}
+            {loading && (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            )}
 
-                  {activeTab === 'sujets' && (
-                    <SubjectsTab 
-                      searchTerm={searchTerm}
-                      onAddSubject={() => setIsSujetDialogOpen(true)}
-                    />
-                  )}
+            {!loading && (
+              <div className="overflow-x-auto">
+                {activeTab === 'candidats' && (
+                  <CandidatesTab 
+                    // candidats={candidats}
+                    searchTerm={searchTerm}
+                    onViewCandidateDetails={handleViewCandidateDetails}
+                  />
+                )}
+
+                {activeTab === 'sujets' && (
+                  <SubjectsTab 
+                    searchTerm={searchTerm}
+                    onAddSubject={() => setIsSujetDialogOpen(true)}
+                  />
+                )}
 
                 {activeTab === 'commissions' && (
                   <CommissionsTab 
@@ -605,37 +604,36 @@ const DirecteurLaboInterface: React.FC = () => {
                   />
                 )}
 
-                  {activeTab === 'preselection' && (
-                    <PreselectionTab onSendInvitations={() => {
-                      // Placeholder function - implement actual invitation sending logic
-                    }} />
-                  )}
+                {activeTab === 'preselection' && (
+                  <PreselectionTab onSendInvitations={function (): void {
+                    throw new Error('Function not implemented.');
+                  } }                  />
+                )}
 
-                  {activeTab === 'resultats' && (
-                    <ResultsTab 
-                      results={results}
-                      searchTerm={searchTerm}
-                      onViewCandidateDetails={handleViewCandidateDetails}
-                    />
-                  )}
+                {activeTab === 'resultats' && (
+                  <ResultsTab 
+                    results={results}
+                    searchTerm={searchTerm}
+                    onViewCandidateDetails={handleViewCandidateDetails}
+                  />
+                )}
 
-                  {activeTab === 'pv' && (
-                    <PvGlobalTab 
-                      onDownloadPV={handleDownloadPV}
-                    />
-                  )}
-                </div>
-              )}
+                {activeTab === 'pv' && (
+                  <PvGlobalTab 
+                    onDownloadPV={handleDownloadPV}
+                  />
+                )}
+              </div>
+            )}
 
 
-              {!loading && activeTab === 'sujets' && filteredSujets.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  Aucun sujet trouvé
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+            {!loading && activeTab === 'sujets' && filteredSujets.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                Aucun sujet trouvé
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Dialog pour ajouter un sujet */}
