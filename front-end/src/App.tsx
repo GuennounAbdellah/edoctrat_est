@@ -21,7 +21,13 @@ import {
 import DirecteurLabo from "./pages/directeur-labo/DirecteurLabo";
 
 import Scolarite from "./pages/scolarite/Scolarite";
-import Professeur from "./pages/professeur/Prefesseur";
+import ProfesseurLayout from "./pages/professeur/ProfesseurLayout";
+import {
+  SujetsPage as ProfSujetsPage,
+  CommissionsPage as ProfCommissionsPage,
+  ResultatsPage as ProfResultatsPage,
+  InscritsPage as ProfInscritsPage
+} from "./pages/professeur/pages";
 import Candidat from "./pages/candidat/Candidat";
 import DirecteurPoleLayout from "./pages/directeur-pole/DirecteurPoleLayout";
 import {
@@ -64,7 +70,16 @@ const App = () => (
           
           <Route path="/labo-dashboard" element={<DirecteurLabo />} />
           <Route path="/scolarite-dashboard" element={<Scolarite />} />
-          <Route path="/professeur-dashboard" element={<Professeur />} />
+          
+          {/* Professeur nested routes */}
+          <Route path="/professeur-dashboard" element={<ProfesseurLayout />}>
+            <Route index element={<Navigate to="sujets" replace />} />
+            <Route path="sujets" element={<ProfSujetsPage />} />
+            <Route path="commissions" element={<ProfCommissionsPage />} />
+            <Route path="resultats" element={<ProfResultatsPage />} />
+            <Route path="inscrits" element={<ProfInscritsPage />} />
+          </Route>
+          
           <Route path="/candidat-dashboard" element={<Candidat />} />
           
           {/* Directeur Pole nested routes */}
