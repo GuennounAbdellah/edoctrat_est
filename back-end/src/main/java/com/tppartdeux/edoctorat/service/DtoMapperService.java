@@ -121,6 +121,7 @@ public class DtoMapperService {
         return PostulerResponse.builder()
                 .id(postuler.getId())
                 .pathFile(postuler.getPathFile())
+                .confirmed(postuler.getConfirmed())
                 .sujet(toSujetResponse(postuler.getSujet()))
                 .candidat(toCandidatResponse(postuler.getCandidat()))
                 .build();

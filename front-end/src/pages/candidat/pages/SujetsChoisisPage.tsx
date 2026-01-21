@@ -6,15 +6,26 @@ import {
   Loader2,
   Trash2,
   ArrowLeft,
-  Upload
+  Send,
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { 
   getCandidatPostulations, 
   deletePostulation,
+  confirmPostulations,
   getBaseConfig,
   PostulationResponse
 } from '@/api/candidatService';
@@ -35,6 +46,7 @@ interface SelectedSujet {
   };
   laboratoire: string;
   pathFile?: string;
+  confirmed?: boolean;
 }
 
 interface ApiError extends Error {
@@ -43,9 +55,12 @@ interface ApiError extends Error {
 
 const SujetsChoisisPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
+  const [isConfirming, setIsConfirming] = useState(false);
   const [selectedSujets, setSelectedSujets] = useState<SelectedSujet[]>([]);
   const [maxSujets, setMaxSujets] = useState(3);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -78,7 +93,8 @@ const SujetsChoisisPage: React.FC = () => {
             ced: { titre: p.sujet?.formationDoctorale?.ced?.titre || '' }
           },
           laboratoire: p.sujet?.laboratoire || '',
-          pathFile: p.pathFile
+          pathFile: p.pathFile,
+          confirmed: p.confirmed
         }));
         setSelectedSujets(selectedFromApi);
 
@@ -95,10 +111,19 @@ const SujetsChoisisPage: React.FC = () => {
 
   const handleRemoveSujet = async (sujetId: number) => {
     const sujet = selectedSujets.find(s => s.id === sujetId);
+    
+    // Prevent removal of confirmed sujets
+    if (sujet?.confirmed) {
+      setError('Impossible de supprimer un sujet déjà confirmé.');
+      return;
+    }
+    
     if (sujet?.postulerId) {
       try {
         await deletePostulation(sujet.postulerId);
         setSelectedSujets(prev => prev.filter(s => s.id !== sujetId));
+        setSuccessMessage('Candidature supprimée avec succès.');
+        setTimeout(() => setSuccessMessage(null), 3000);
       } catch (err: unknown) {
         console.error('Error deleting postulation:', err);
         const apiError = err as ApiError;
@@ -108,6 +133,41 @@ const SujetsChoisisPage: React.FC = () => {
       setSelectedSujets(prev => prev.filter(s => s.id !== sujetId));
     }
   };
+
+  const handleConfirmSelection = async () => {
+    setShowConfirmDialog(false);
+    setIsConfirming(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      // Get all unconfirmed postulation IDs
+      const unconfirmedPostulationIds = selectedSujets
+        .filter(s => s.postulerId && !s.confirmed)
+        .map(s => s.postulerId as number);
+
+      if (unconfirmedPostulationIds.length === 0) {
+        setError('Aucun sujet à confirmer.');
+        setIsConfirming(false);
+        return;
+      }
+
+      await confirmPostulations(unconfirmedPostulationIds);
+      
+      // Update local state to mark all as confirmed
+      setSelectedSujets(prev => prev.map(s => ({ ...s, confirmed: true })));
+      setSuccessMessage('Vos candidatures ont été confirmées avec succès ! Vous recevrez une notification pour les prochaines étapes.');
+    } catch (err: unknown) {
+      console.error('Error confirming postulations:', err);
+      const apiError = err as ApiError;
+      setError(apiError.friendlyMessage || 'Impossible de confirmer vos candidatures. Veuillez réessayer.');
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  const hasUnconfirmedSujets = selectedSujets.some(s => !s.confirmed);
+  const allConfirmed = selectedSujets.length > 0 && selectedSujets.every(s => s.confirmed);
 
   if (isLoading) {
     return (
@@ -148,53 +208,125 @@ const SujetsChoisisPage: React.FC = () => {
         </Alert>
       )}
 
+      {successMessage && (
+        <Alert className="border-green-200 bg-green-50">
+          <CheckCircle className="w-4 h-4 text-green-600" />
+          <AlertDescription className="text-green-800">{successMessage}</AlertDescription>
+        </Alert>
+      )}
+
       {/* Selected Subjects */}
       {selectedSujets.length > 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-              Sujets sélectionnés ({selectedSujets.length}/{maxSujets})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {selectedSujets.map((sujet) => (
-              <div
-                key={sujet.id}
-                className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg gap-4"
-              >
-                <div className="flex-1">
-                  <h4 className="font-medium text-gray-900">{sujet.titre}</h4>
-                  <p className="text-sm text-gray-600">
-                    Prof. {sujet.professeur.prenom} {sujet.professeur.nom}
-                  </p>
-                  {sujet.pathFile && (
-                    <p className="text-sm text-primary mt-1">
-                      📄 Projet de thèse: {sujet.pathFile}
-                    </p>
-                  )}
-                </div>
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="file"
-                      accept="application/pdf"
-                      className="max-w-[200px] text-sm"
-                    />
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  Sujets sélectionnés ({selectedSujets.length}/{maxSujets})
+                </div>
+                {allConfirmed && (
+                  <Badge className="bg-green-100 text-green-800">
+                    Tous confirmés
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {selectedSujets.map((sujet) => (
+                <div
+                  key={sujet.id}
+                  className={`flex flex-col md:flex-row md:items-center justify-between p-4 border rounded-lg gap-4 ${
+                    sujet.confirmed 
+                      ? 'bg-green-50 border-green-300' 
+                      : 'bg-yellow-50 border-yellow-200'
+                  }`}
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="font-medium text-gray-900">{sujet.titre}</h4>
+                      {sujet.confirmed ? (
+                        <Badge className="bg-green-100 text-green-800 text-xs">
+                          Confirmé
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-yellow-700 border-yellow-400 text-xs">
+                          En attente de confirmation
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Prof. {sujet.professeur.prenom} {sujet.professeur.nom}
+                    </p>
+                    {sujet.pathFile && (
+                      <p className="text-sm text-primary mt-1">
+                        📄 Projet de thèse: {sujet.pathFile}
+                      </p>
+                    )}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    onClick={() => handleRemoveSujet(sujet.id)}
+                  <div className="flex items-center gap-2">
+                    {!sujet.confirmed && (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="file"
+                            accept="application/pdf"
+                            className="max-w-[200px] text-sm"
+                          />
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => handleRemoveSujet(sujet.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Confirmation Button */}
+          {hasUnconfirmedSujets && (
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="p-6">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-gray-900">Confirmez vos choix</p>
+                      <p className="text-sm text-gray-600">
+                        Une fois confirmés, vos choix de sujets seront envoyés aux professeurs concernés. 
+                        Vous ne pourrez plus modifier votre sélection.
+                      </p>
+                    </div>
+                  </div>
+                  <Button 
+                    className="gap-2 whitespace-nowrap"
+                    onClick={() => setShowConfirmDialog(true)}
+                    disabled={isConfirming}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    {isConfirming ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Confirmation...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        Confirmer mes choix
+                      </>
+                    )}
                   </Button>
                 </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          )}
+        </>
       ) : (
         <Card>
           <CardContent className="py-12">
@@ -214,6 +346,39 @@ const SujetsChoisisPage: React.FC = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Confirmation Dialog */}
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmer vos choix de sujets</DialogTitle>
+            <DialogDescription>
+              Vous êtes sur le point de confirmer vos choix de sujets de thèse. 
+              Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-600 mb-3">Sujets à confirmer :</p>
+            <ul className="space-y-2">
+              {selectedSujets.filter(s => !s.confirmed).map((sujet) => (
+                <li key={sujet.id} className="flex items-center gap-2 text-sm">
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  <span>{sujet.titre}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleConfirmSelection} className="gap-2">
+              <Send className="w-4 h-4" />
+              Confirmer définitivement
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
