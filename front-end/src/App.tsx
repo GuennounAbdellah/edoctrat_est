@@ -35,6 +35,7 @@ import {
   InfoPersonnellesPage,
   ParcoursPage,
   PostulerPage,
+  SujetsChoisisPage,
   NotificationsPage,
   BacForm,
   LicenceForm,
@@ -107,6 +108,7 @@ const App = () => (
               <Route path="ingenieur" element={<IngenieurForm />} />
             </Route>
             <Route path="postuler" element={<PostulerPage />} />
+            <Route path="sujets-choisis" element={<SujetsChoisisPage />} />
             <Route path="notifications" element={<NotificationsPage />} />
           </Route>
           

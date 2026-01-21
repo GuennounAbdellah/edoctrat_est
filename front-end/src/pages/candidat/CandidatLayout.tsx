@@ -156,6 +156,12 @@ const CandidatLayout: React.FC = () => {
       description: 'Choisir et postuler aux sujets'
     },
     {
+      path: '/candidat-dashboard/sujets-choisis',
+      label: 'Sujets Choisis',
+      icon: BookOpen,
+      description: 'Gérer vos candidatures'
+    },
+    {
       path: '/candidat-dashboard/notifications',
       label: 'Notifications',
       icon: Bell,
