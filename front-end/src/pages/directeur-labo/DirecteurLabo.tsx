@@ -663,8 +663,8 @@ const DirecteurLaboInterface: React.FC = () => {
                   <SelectValue placeholder="Sélectionner un directeur" />
                 </SelectTrigger>
                 <SelectContent>
-                {Array.isArray(professeurs?.results) &&
-                  professeurs.results
+                {Array.isArray(professeurs) &&
+                  professeurs
                     .filter(
                       (professeur) =>
                         String(professeur.id) !== sujetFormData.coDirecteur
@@ -692,8 +692,8 @@ const DirecteurLaboInterface: React.FC = () => {
                   <SelectValue placeholder="Sélectionner un co-directeur (optionnel)" />
                 </SelectTrigger>
                 <SelectContent>
-                {Array.isArray(professeurs?.results) &&
-                  professeurs.results
+                {Array.isArray(professeurs) &&
+                  professeurs
                     .filter(
                       (professeur) =>
                         String(professeur.id) !== sujetFormData.directeur
@@ -721,8 +721,8 @@ const DirecteurLaboInterface: React.FC = () => {
                   <SelectValue placeholder="Sélectionner une formation" />
                 </SelectTrigger>
                 <SelectContent>
-                {Array.isArray(formations?.results) &&
-                  formations.results.map((formation) => (
+                {Array.isArray(formations) &&
+                  formations.map((formation) => (
                     <SelectItem
                       key={formation.id}
                       value={String(formation.id)}

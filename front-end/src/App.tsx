@@ -28,7 +28,21 @@ import {
   ResultatsPage as ProfResultatsPage,
   InscritsPage as ProfInscritsPage
 } from "./pages/professeur/pages";
-import Candidat from "./pages/candidat/Candidat";
+
+// Candidat imports
+import CandidatLayout from "./pages/candidat/CandidatLayout";
+import {
+  InfoPersonnellesPage,
+  ParcoursPage,
+  PostulerPage,
+  NotificationsPage,
+  BacForm,
+  LicenceForm,
+  MasterForm,
+  DutForm,
+  IngenieurForm
+} from "./pages/candidat/pages";
+
 import DirecteurPoleLayout from "./pages/directeur-pole/DirecteurPoleLayout";
 import {
   SujetsPage,
@@ -80,7 +94,21 @@ const App = () => (
             <Route path="inscrits" element={<ProfInscritsPage />} />
           </Route>
           
-          <Route path="/candidat-dashboard" element={<Candidat />} />
+          {/* Candidat nested routes */}
+          <Route path="/candidat-dashboard" element={<CandidatLayout />}>
+            <Route index element={<Navigate to="info-personnelles" replace />} />
+            <Route path="info-personnelles" element={<InfoPersonnellesPage />} />
+            <Route path="parcours" element={<ParcoursPage />}>
+              <Route index element={<Navigate to="bac" replace />} />
+              <Route path="bac" element={<BacForm />} />
+              <Route path="licence" element={<LicenceForm />} />
+              <Route path="master" element={<MasterForm />} />
+              <Route path="dut" element={<DutForm />} />
+              <Route path="ingenieur" element={<IngenieurForm />} />
+            </Route>
+            <Route path="postuler" element={<PostulerPage />} />
+            <Route path="notifications" element={<NotificationsPage />} />
+          </Route>
           
           {/* Directeur Pole nested routes */}
           <Route path="/pole-dashboard" element={<DirecteurPoleLayout />}>
