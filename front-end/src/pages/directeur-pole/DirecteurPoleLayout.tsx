@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import Header from '@/components/layout/Header';
 
 const DirecteurPoleLayout: React.FC = () => {
   const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
@@ -67,60 +68,23 @@ const DirecteurPoleLayout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header Section */}
-      <section className="py-6 lg:py-8 bg-gradient-to-r from-primary/10 to-secondary/10 border-b border-border">
+      <Header />
+      
+      {/* Hero Section */}
+      <section className="py-8 lg:py-16 bg-gradient-to-r from-primary/5 to-secondary/5 mt-20">
         <div className="container mx-auto px-4 lg:px-8">
-          <div className="flex flex-col lg:flex-row justify-between items-center gap-6 max-w-6xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-center lg:text-left order-2 lg:order-1"
-            >
-              <h1 className="text-2xl md:text-3xl font-serif font-bold text-foreground">
-                Espace Directeur de Pôle
-              </h1>
-              <p className="text-sm md:text-base text-muted-foreground mt-1">
-                Gestion et supervision des sujets, candidats, commissions et calendrier du pôle doctoral
-              </p>
-            </motion.div>
-            
-            {loggedDirector && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg p-3 shadow-sm border border-border min-w-[200px] order-1 lg:order-2"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="bg-primary/10 p-2 rounded-full">
-                    <GraduationCap className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-xs text-muted-foreground">Connecté en tant que</p>
-                    <p className="font-medium text-sm">{loggedDirector.prenom} {loggedDirector.nom}</p>
-                  </div>
-                </div>
-                <AlertDialog open={showLogoutConfirmation} onOpenChange={setShowLogoutConfirmation}>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="outline" size="icon" className="rounded-full h-9 w-9">
-                      <LogOut className="w-4 h-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Confirmer la déconnexion</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Êtes-vous sûr de vouloir vous déconnecter ? Vous devrez vous reconnecter pour accéder à votre espace.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Annuler</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleLogout}>Déconnexion</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </motion.div>
-            )}
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-4xl mx-auto text-center"
+          >
+            <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-4">
+              Espace Directeur de Pôle
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Gestion et supervision des sujets, candidats, commissions et calendrier du pôle doctoral
+            </p>
+          </motion.div>
         </div>
       </section>
 

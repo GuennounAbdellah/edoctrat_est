@@ -13,25 +13,25 @@ import java.util.Properties;
 @RequiredArgsConstructor
 public class EmailSenderService {
 
-    @Value("${spring.mail.host:smtp.gmail.com}")
+    @Value("${spring.mail.host:localhost}")
     private String mailHost;
 
-    @Value("${spring.mail.port:587}")
+    @Value("${spring.mail.port:1026}")
     private int mailPort;
 
-    @Value("${spring.mail.username}")
+    @Value("${spring.mail.username:}")
     private String mailUsername;
 
-    @Value("${sender.email:edoctorat.est@usmba.ac.ma}")
+    @Value("${sender.email:noreply@edoctorat.com}")
     private String senderEmail;
 
-    @Value("${spring.mail.password}")
+    @Value("${spring.mail.password:}")
     private String mailPassword;
 
-    @Value("${spring.mail.properties.mail.smtp.auth:true}")
+    @Value("${spring.mail.properties.mail.smtp.auth:false}")
     private boolean smtpAuth;
 
-    @Value("${spring.mail.properties.mail.smtp.starttls.enable:true}")
+    @Value("${spring.mail.properties.mail.smtp.starttls.enable:false}")
     private boolean starttlsEnable;
 
     @Value("${app.frontend.url:http://localhost:8080}")
@@ -71,26 +71,40 @@ public class EmailSenderService {
      */
     public void sendEmail(String toEmail, String subject, String body) {
         try {
+            System.out.println("📧 Attempting to send email to: " + toEmail);
+            System.out.println("📧 Using SMTP server: " + mailHost + ":" + mailPort);
+            
             Properties props = new Properties();
             props.put("mail.smtp.host", mailHost);
             props.put("mail.smtp.port", mailPort);
             props.put("mail.smtp.auth", smtpAuth);
             props.put("mail.smtp.starttls.enable", starttlsEnable);
-            props.put("mail.smtp.starttls.required", "true");
-            props.put("mail.smtp.ssl.trust", mailHost);
-            // For Java 11+ compatibility with Gmail
-            props.put("mail.smtp.ssl.protocols", "TLSv1.2");
-            // Additional properties for better compatibility
-            props.put("mail.smtp.connectiontimeout", "5000");
-            props.put("mail.smtp.timeout", "5000");
-            props.put("mail.smtp.writetimeout", "5000");
+            
+            // Pour MailHog, pas besoin de SSL/TLS
+            if (!smtpAuth) {
+                props.put("mail.smtp.ssl.trust", "*");
+            }
+            
+            // Configuration de timeout
+            props.put("mail.smtp.connectiontimeout", "10000");
+            props.put("mail.smtp.timeout", "10000");
+            props.put("mail.smtp.writetimeout", "10000");
 
-            Session session = Session.getInstance(props, new Authenticator() {
-                @Override
-                protected PasswordAuthentication getPasswordAuthentication() {
-                    return new PasswordAuthentication(mailUsername, mailPassword);
-                }
-            });
+            Session session;
+            if (smtpAuth && mailUsername != null && !mailUsername.isEmpty()) {
+                session = Session.getInstance(props, new Authenticator() {
+                    @Override
+                    protected PasswordAuthentication getPasswordAuthentication() {
+                        return new PasswordAuthentication(mailUsername, mailPassword);
+                    }
+                });
+            } else {
+                // MailHog n'a pas besoin d'authentification
+                session = Session.getInstance(props);
+            }
+
+            // Active le debug pour voir les détails
+            session.setDebug(true);
 
             Message message = new MimeMessage(session);
             message.setFrom(new InternetAddress(senderEmail));
@@ -99,18 +113,20 @@ public class EmailSenderService {
             message.setContent(body, "text/html; charset=utf-8");
 
             Transport.send(message);
-            System.out.println("Email sent successfully to: " + toEmail);
+            System.out.println("✅ Email sent successfully to: " + toEmail);
 
         } catch (MessagingException e) {
-            System.err.println("Failed to send email to: " + toEmail);
+            System.err.println("❌ Failed to send email to: " + toEmail);
+            System.err.println("Error: " + e.getMessage());
             e.printStackTrace();
             throw new RuntimeException("Failed to send email: " + e.getMessage(), e);
         }
     }
 
-    /**
-     * Builds the HTML body for email verification
-     */
+    // Les méthodes buildVerificationEmailBody, buildWelcomeEmailBody, 
+    // et buildPasswordResetEmailBody restent identiques
+    // ... (gardez le code HTML existant)
+    
     private String buildVerificationEmailBody(String candidatName, String verificationLink) {
         return """
             <!DOCTYPE html>
@@ -160,9 +176,6 @@ public class EmailSenderService {
             """.formatted(candidatName, verificationLink, verificationLink);
     }
 
-    /**
-     * Builds the HTML body for welcome email after verification
-     */
     private String buildWelcomeEmailBody(String candidatName) {
         return """
             <!DOCTYPE html>
@@ -216,9 +229,6 @@ public class EmailSenderService {
             """.formatted(candidatName, frontendUrl);
     }
 
-    /**
-     * Builds the HTML body for password reset email
-     */
     private String buildPasswordResetEmailBody(String resetLink) {
         return """
             <!DOCTYPE html>

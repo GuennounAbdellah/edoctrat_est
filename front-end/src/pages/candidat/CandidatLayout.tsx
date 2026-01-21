@@ -29,6 +29,7 @@ import {
   AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import Header from '@/components/layout/Header';
 import { getCandidatInfo, getCandidatNotifications, getCandidatParcours } from '@/api/candidatService';
 
 interface CandidatInfo {
@@ -175,60 +176,14 @@ const CandidatLayout: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header Section */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-3">
-              <div className="bg-primary/10 p-2 rounded-lg">
-                <GraduationCap className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-lg font-semibold text-gray-900">Espace Candidat</h1>
-                <p className="text-xs text-gray-500">Gestion de votre candidature doctorale</p>
-              </div>
-            </div>
+    <div className="min-h-screen bg-background">
+      <Header />
 
-            {candidatInfo && (
-              <div className="flex items-center gap-4">
-                <div className="hidden md:block text-right">
-                  <p className="text-sm font-medium text-gray-900">
-                    {candidatInfo.prenom} {candidatInfo.nom}
-                  </p>
-                  <p className="text-xs text-gray-500">{candidatInfo.email}</p>
-                </div>
-                <AlertDialog open={showLogoutConfirmation} onOpenChange={setShowLogoutConfirmation}>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <LogOut className="w-4 h-4" />
-                      <span className="hidden sm:inline">Déconnexion</span>
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Confirmer la déconnexion</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Êtes-vous sûr de vouloir vous déconnecter ? Vous devrez vous reconnecter pour accéder à votre espace.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Annuler</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleLogout}>Déconnexion</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
-
-      <div className="container mx-auto px-4 lg:px-8 py-6">
+      <div className="container mx-auto px-4 lg:px-8 py-6 mt-16">
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Sidebar - 30% width on large screens */}
           <aside className="w-full lg:w-[30%] lg:max-w-xs">
-            <div className="lg:sticky lg:top-24 space-y-4">
+            <div className="lg:sticky lg:top-32 space-y-4">
               {/* Profile Card */}
               <Card className="overflow-hidden">
                 <div className="bg-gradient-to-r from-primary to-primary/80 p-6 text-center">

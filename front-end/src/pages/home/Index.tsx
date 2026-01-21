@@ -5,7 +5,7 @@ import { ArrowRight, GraduationCap, Users, BookOpen, Award, Calendar, FlaskConic
 import { Button } from '@/components/ui/button';
 import Layout from '@/components/layout/Layout';
 import { jwtDecode } from 'jwt-decode';
-import heroImage from '@/assets/hero-university.jpg';
+import heroImage from '@/assets/hero-university.jpeg';
 
 interface JwtPayload {
   exp: number;
