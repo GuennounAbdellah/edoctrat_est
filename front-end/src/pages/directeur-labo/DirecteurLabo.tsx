@@ -41,7 +41,6 @@ import CommissionsTab from './CommissionsTab';
 import ResultsTab from './ResultsTab';
 import PreselectionTab from './PreselectionTab';
 import PvGlobalTab from './PvGlobalTab';
-import Header from '../../components/layout/Header';
 
 // Import models
 import { Candidat, JoinedCandidate } from '@/models/Candidat';
@@ -607,9 +606,9 @@ const DirecteurLaboInterface: React.FC = () => {
                 )}
 
                   {activeTab === 'preselection' && (
-                    <PreselectionTab onSendInvitations={function (): void {
-                      throw new Error('Function not implemented.');
-                    } }                  />
+                    <PreselectionTab onSendInvitations={() => {
+                      // Placeholder function - implement actual invitation sending logic
+                    }} />
                   )}
 
                   {activeTab === 'resultats' && (

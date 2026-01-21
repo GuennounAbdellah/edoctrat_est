@@ -421,4 +421,4 @@ const DirecteurCed = () => {
   );
 };
 
-export default DirecteurPole;
+export default DirecteurCed
