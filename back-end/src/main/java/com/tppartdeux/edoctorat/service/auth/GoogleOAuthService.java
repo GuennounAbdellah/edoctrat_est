@@ -36,6 +36,10 @@ public class GoogleOAuthService {
     
     public Optional<AuthProfResponse> authenticateWithGoogle(String idTokenString) {
         try {
+            System.out.println("=== Google OAuth Debug Info ===");
+            System.out.println("Client ID configured: " + clientId);
+            System.out.println("Token string length: " + (idTokenString != null ? idTokenString.length() : "null"));
+            
             // Verify the ID token
             GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), JacksonFactory.getDefaultInstance())
                     .setAudience(List.of(clientId))
@@ -43,7 +47,7 @@ public class GoogleOAuthService {
             
             GoogleIdToken idToken = verifier.verify(idTokenString);
             if (idToken == null) {
-                System.err.println("Invalid Google ID token");
+                System.err.println("Invalid Google ID token - verification failed");
                 return Optional.empty();
             }
             
@@ -52,10 +56,13 @@ public class GoogleOAuthService {
             String firstName = (String) payload.get("given_name");
             String lastName = (String) payload.get("family_name");
             
+            System.out.println("Google token verified successfully");
+            System.out.println("User email from Google: " + email);
+            System.out.println("User name: " + firstName + " " + lastName);
+            
             // Find user by email
             User user = userRepository.findByEmail(email);
             if (user == null) {
-                // Auto-create professor account for first-time Google OAuth users
                 System.out.println("User not found with email: " + email + ". Creating new professor account via Google OAuth.");
                 user = createProfessorUser(email, firstName, lastName);
                 if (user == null) {
@@ -63,27 +70,56 @@ public class GoogleOAuthService {
                     return Optional.empty();
                 }
                 System.out.println("Successfully created professor account for: " + email);
+            } else {
+                System.out.println("Found existing user with email: " + email);
+                System.out.println("User ID: " + user.getId());
+                System.out.println("User active status: " + user.getIsActive());
+                System.out.println("Number of user groups: " + (user.getUserGroups() != null ? user.getUserGroups().size() : 0));
+                
+                if (user.getUserGroups() != null && !user.getUserGroups().isEmpty()) {
+                    System.out.println("User groups:");
+                    for (UserGroups ug : user.getUserGroups()) {
+                        if (ug.getGroup() != null) {
+                            System.out.println("  - " + ug.getGroup().getName());
+                        } else {
+                            System.out.println("  - Group is null");
+                        }
+                    }
+                } else {
+                    System.out.println("WARNING: User has no groups assigned!");
+                }
             }
             
             // Check if user belongs to professor/director groups (not candidat)
-            boolean isAuthorized = user.getUserGroups().stream()
-                    .anyMatch(userGroup -> userGroup.getGroup() != null && 
-                         !"candidat".equalsIgnoreCase(userGroup.getGroup().getName()));
+            boolean isAuthorized = false;
+            if (user.getUserGroups() != null) {
+                isAuthorized = user.getUserGroups().stream()
+                        .anyMatch(userGroup -> userGroup.getGroup() != null && 
+                             !"candidat".equalsIgnoreCase(userGroup.getGroup().getName()));
+            }
+            
+            System.out.println("User authorization status: " + (isAuthorized ? "AUTHORIZED" : "NOT AUTHORIZED FOR OAUTH"));
             
             if (!isAuthorized) {
-                System.err.println("Google OAuth is restricted to professors and directors. User: " + email + " Groups: " + 
-                    user.getUserGroups().stream()
-                        .filter(ug -> ug.getGroup() != null)
-                        .map(ug -> ug.getGroup().getName())
-                        .toList());
+                System.err.println("Google OAuth ACCESS DENIED for user: " + email);
+                System.err.println("Reason: User has candidat role or no valid groups");
+                if (user.getUserGroups() != null) {
+                    System.err.println("User groups: " + 
+                        user.getUserGroups().stream()
+                            .filter(ug -> ug.getGroup() != null)
+                            .map(ug -> ug.getGroup().getName())
+                            .toList());
+                } else {
+                    System.err.println("User has no groups assigned");
+                }
                 return Optional.empty();
             }
             
             // Generate JWT tokens
             List<String> roles = user.getUserGroups().stream()
-                    .filter(userGroup -> userGroup.getGroup() != null)
-                    .map(userGroup -> userGroup.getGroup().getName())
-                    .toList();
+                .filter(userGroup -> userGroup.getGroup() != null)
+                .map(userGroup -> userGroup.getGroup().getName())
+                .toList();
             
             String accessToken = jwtTokenService.generateAccessToken(email, roles);
             String refreshToken = jwtTokenService.generateRefreshToken(email);
@@ -159,7 +195,18 @@ public class GoogleOAuthService {
                     .build();
             userGroupRepository.save(userGroup);
             
+            // Refresh user to get updated groups
+            user = userRepository.findById(user.getId()).orElse(user);
+            
             System.out.println("Professor user created successfully - Email: " + email + ", Name: " + firstName + " " + lastName);
+            System.out.println("User now has " + (user.getUserGroups() != null ? user.getUserGroups().size() : 0) + " groups assigned");
+            if (user.getUserGroups() != null) {
+                for (UserGroups ug : user.getUserGroups()) {
+                    if (ug.getGroup() != null) {
+                        System.out.println("  Assigned group: " + ug.getGroup().getName());
+                    }
+                }
+            }
             return user;
             
         } catch (Exception e) {

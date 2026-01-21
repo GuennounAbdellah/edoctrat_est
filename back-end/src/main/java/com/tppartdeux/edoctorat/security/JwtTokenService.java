@@ -41,7 +41,19 @@ public class JwtTokenService {
     
     @PostConstruct
     public void init(){
-        this.key = Keys.hmacShaKeyFor(secrekey.getBytes());
+        // Ensure the key is at least 256 bits for HS256
+        byte[] keyBytes = secrekey.getBytes();
+        if (keyBytes.length < 32) { // 32 bytes = 256 bits
+            // Pad the key if it's too short
+            byte[] paddedKey = new byte[32];
+            System.arraycopy(keyBytes, 0, paddedKey, 0, keyBytes.length);
+            for (int i = keyBytes.length; i < 32; i++) {
+                paddedKey[i] = 0; // pad with zeros
+            }
+            this.key = Keys.hmacShaKeyFor(paddedKey);
+        } else {
+            this.key = Keys.hmacShaKeyFor(keyBytes);
+        }
     }
 
     /**

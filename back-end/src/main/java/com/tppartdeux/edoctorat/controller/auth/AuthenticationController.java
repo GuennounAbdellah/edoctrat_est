@@ -96,14 +96,30 @@ public class AuthenticationController {
     
     // POST /api/verify-is-prof/ - Professor login via Google token
     @PostMapping("/verify-is-prof/")
-    public ResponseEntity<AuthProfResponse> verifyIsProfessor(@RequestBody VerifyTokenRequest request) {
+    public ResponseEntity<?> verifyIsProfessor(@RequestBody VerifyTokenRequest request) {
         try {
             System.out.println("!!!!!!!Received verify-is-prof request for token: " + request.getToken());
             Optional<AuthProfResponse> authProf = userService.verifyProfessor(request.getToken());
-            return authProf.map(ResponseEntity::ok)
-                    .orElse(ResponseEntity.status(401).build());
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(401).build();
+            
+            if (authProf.isPresent()) {
+                System.out.println("Google OAuth successful for user");
+                return ResponseEntity.ok(authProf.get());
+            } else {
+                System.err.println("Google OAuth failed - user not authorized or not found");
+                return ResponseEntity.status(401)
+                    .body(Map.of(
+                        "error", "UNAUTHORIZED",
+                        "message", "Google OAuth échoué - utilisateur non autorisé ou introuvable"
+                    ));
+            }
+        } catch (Exception e) {
+            System.err.println("Google OAuth exception: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(401)
+                .body(Map.of(
+                    "error", "AUTHENTICATION_ERROR",
+                    "message", "Erreur d'authentification Google: " + e.getMessage()
+                ));
         }
     }
 
