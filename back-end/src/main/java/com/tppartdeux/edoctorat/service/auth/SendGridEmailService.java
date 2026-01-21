@@ -1,40 +1,29 @@
 package com.tppartdeux.edoctorat.service.auth;
 
+import com.sendgrid.*;
+import com.sendgrid.helpers.mail.Mail;
+import com.sendgrid.helpers.mail.objects.Content;
+import com.sendgrid.helpers.mail.objects.Email;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import javax.mail.*;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeMessage;
-import java.util.Properties;
+import java.io.IOException;
 
 @Service
 @RequiredArgsConstructor
-public class EmailSenderService {
+public class SendGridEmailService {
 
-    @Value("${spring.mail.host:localhost}")
-    private String mailHost;
+    @Value("${sendgrid.api.key}")
+    private String sendGridApiKey;
 
-    @Value("${spring.mail.port:1026}")
-    private int mailPort;
-
-    @Value("${spring.mail.username:}")
-    private String mailUsername;
-
-    @Value("${sender.email:noreply@edoctorat.com}")
+    @Value("${sender.email:edoctorat.est@gmail.com}")
     private String senderEmail;
 
-    @Value("${spring.mail.password:}")
-    private String mailPassword;
+    @Value("${sender.name:E-Doctorat}")
+    private String senderName;
 
-    @Value("${spring.mail.properties.mail.smtp.auth:false}")
-    private boolean smtpAuth;
-
-    @Value("${spring.mail.properties.mail.smtp.starttls.enable:false}")
-    private boolean starttlsEnable;
-
-    @Value("${app.frontend.url:http://localhost:8080}")
+    @Value("${app.frontend.url:http://localhost:5173}")
     private String frontendUrl;
 
     /**
@@ -67,66 +56,40 @@ public class EmailSenderService {
     }
 
     /**
-     * Sends a generic email
+     * Sends email using SendGrid API
      */
-    public void sendEmail(String toEmail, String subject, String body) {
+    private void sendEmail(String toEmail, String subject, String htmlBody) {
         try {
-            System.out.println("📧 Attempting to send email to: " + toEmail);
-            System.out.println("📧 Using SMTP server: " + mailHost + ":" + mailPort);
+            System.out.println("📧 Sending email via SendGrid to: " + toEmail);
             
-            Properties props = new Properties();
-            props.put("mail.smtp.host", mailHost);
-            props.put("mail.smtp.port", mailPort);
-            props.put("mail.smtp.auth", smtpAuth);
-            props.put("mail.smtp.starttls.enable", starttlsEnable);
-            
-            // Pour MailHog, pas besoin de SSL/TLS
-            if (!smtpAuth) {
-                props.put("mail.smtp.ssl.trust", "*");
-            }
-            
-            // Configuration de timeout
-            props.put("mail.smtp.connectiontimeout", "10000");
-            props.put("mail.smtp.timeout", "10000");
-            props.put("mail.smtp.writetimeout", "10000");
+            Email from = new Email(senderEmail, senderName);
+            Email to = new Email(toEmail);
+            Content content = new Content("text/html", htmlBody);
+            Mail mail = new Mail(from, subject, to, content);
 
-            Session session;
-            if (smtpAuth && mailUsername != null && !mailUsername.isEmpty()) {
-                session = Session.getInstance(props, new Authenticator() {
-                    @Override
-                    protected PasswordAuthentication getPasswordAuthentication() {
-                        return new PasswordAuthentication(mailUsername, mailPassword);
-                    }
-                });
+            SendGrid sg = new SendGrid(sendGridApiKey);
+            Request request = new Request();
+
+            request.setMethod(Method.POST);
+            request.setEndpoint("mail/send");
+            request.setBody(mail.build());
+            
+            Response response = sg.api(request);
+            
+            if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
+                System.out.println("✅ Email sent successfully to: " + toEmail);
+                System.out.println("SendGrid Status Code: " + response.getStatusCode());
             } else {
-                // MailHog n'a pas besoin d'authentification
-                session = Session.getInstance(props);
+                System.err.println("⚠️ SendGrid returned status: " + response.getStatusCode());
+                System.err.println("Response Body: " + response.getBody());
             }
-
-            // Active le debug pour voir les détails
-            session.setDebug(true);
-
-            Message message = new MimeMessage(session);
-            message.setFrom(new InternetAddress(senderEmail));
-            message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(toEmail));
-            message.setSubject(subject);
-            message.setContent(body, "text/html; charset=utf-8");
-
-            Transport.send(message);
-            System.out.println("✅ Email sent successfully to: " + toEmail);
-
-        } catch (MessagingException e) {
+        } catch (IOException e) {
             System.err.println("❌ Failed to send email to: " + toEmail);
-            System.err.println("Error: " + e.getMessage());
             e.printStackTrace();
             throw new RuntimeException("Failed to send email: " + e.getMessage(), e);
         }
     }
 
-    // Les méthodes buildVerificationEmailBody, buildWelcomeEmailBody, 
-    // et buildPasswordResetEmailBody restent identiques
-    // ... (gardez le code HTML existant)
-    
     private String buildVerificationEmailBody(String candidatName, String verificationLink) {
         return """
             <!DOCTYPE html>

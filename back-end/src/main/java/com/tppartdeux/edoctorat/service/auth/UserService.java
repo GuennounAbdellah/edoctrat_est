@@ -47,7 +47,7 @@ public class UserService {
     private UserGroupRepository userGroupRepository;
 
     @Autowired
-    private EmailSenderService emailSenderService;
+    private SendGridEmailService emailSenderService;
     
     @Autowired
     private GoogleOAuthService googleOAuthService;
