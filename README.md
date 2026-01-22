@@ -18,6 +18,43 @@ This repository contains two main parts:
 
 See configuration examples: [back-end/src/main/resources/application.properties](back-end/src/main/resources/application.properties) and front-end env file `.env.local` at `front-end/.env.local`.
 
+## Fonctionnalités par rôle
+Cette section décrit, à partir du code présent, les principales fonctionnalités disponibles pour chaque acteur (rôle) de l'application.
+
+- **Candidat**
+	- Inscription / pré-inscription et complétion de dossier (données personnelles, diplômes, annexes).
+	- Dépôt de sujet / proposition de sujet.
+	- Postuler aux sujets ou aux commissions.
+	- Consulter calendrier, notifications et résultats (statut de candidature, décisions).
+	- Télécharger / joindre des pièces (annexes, diplômes, attestations).
+
+- **Professeur**
+	- Authentification et gestion de profil.
+	- Proposer des sujets et les gérer (édition, suppression, état).
+	- Consulter candidats associés et dossiers soumis.
+	- Participer en tant qu'examinateur; accéder aux convocations et documents liés.
+
+- **Directeur de CED (Centre/Etablissement de doctorat)**
+	- Valider/contrôler les dossiers de pré-inscription.
+	- Gérer commissions et planification au niveau du CED.
+	- Suivre listes de candidats et statuts administratifs.
+
+- **Directeur de Laboratoire**
+	- Créer et gérer les commissions (composition, date/heure, lieu).
+	- Assigner examinateurs, confirmer disponibilités.
+	- Gérer sujets rattachés au laboratoire et candidats affiliés.
+
+- **Directeur de Pôle**
+	- Supervision inter-laboratoires et validation finale pour certaines étapes.
+	- Gestion de communications et notifications liées aux p ôles.
+
+- **Scolarité / Administration**
+	- Gestion des inscriptions administratives définitives.
+	- Génération et envoi des convocations / courriers.
+	- Accès aux listes complètes (candidats, diplômes, documents), export éventuel.
+
+Note: Les noms exacts des actions et endpoints se trouvent dans les contrôleurs backend (dossier `back-end/src/main/java/com/tppartdeux/edoctorat/controller`) et liaisons frontend dans `front-end/src/pages`.
+
 ## Prerequisites
 - Java 17 or later (Spring Boot 3.x requires Java 17+).
 - Maven (or use the included `mvnw` / `mvnw.cmd`).
