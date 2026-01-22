@@ -217,13 +217,4 @@ This repository does not include Dockerfiles by default. To containerize:
 ## Troubleshooting
 - If frontend cannot reach the API, confirm backend is running and update the frontend API base URL.
 - For database errors, verify the JDBC URL and credentials in [back-end/src/main/resources/application.properties](back-end/src/main/resources/application.properties).
-
-## License
-Add a license file (`LICENSE`) to the repository and update this section accordingly.
-
-## Contact
-For questions, open an issue in this repository.
-
----
-
-*README generated based on repository structure (Spring Boot backend + Vite React frontend).*
+	
