@@ -7,6 +7,7 @@ import { ExaminerResponse } from '@/models/ExaminerResponse';
 import { FormationDoctorale } from '@/models/FormationDoctorale';
 import { Professeur } from '@/models/Professeur';
 import { Inscription } from '@/models/Inscription';
+import { Postuler } from '@/models/Postuler';
 
 // Result interface for paginated responses
 interface ResultResponse<T> {
@@ -149,9 +150,15 @@ export const ProfesseurService = {
   },
 
   // Get candidats who applied to professeur's sujets
-  getCandidats: async (): Promise<ResultResponse<unknown>> => {
+  getCandidats: async (limit?: number, offset?: number): Promise<ResultResponse<Postuler>> => {
     try {
-      const response = await api.get<ResultResponse<unknown>>('/api/get-professeur-candidats/');
+      let url = '/api/get-professeur-candidats/';
+      const params = new URLSearchParams();
+      if (limit) params.append('limit', limit.toString());
+      if (offset) params.append('offset', offset.toString());
+      if (params.toString()) url += `?${params.toString()}`;
+      
+      const response = await api.get<ResultResponse<Postuler>>(url);
       return response.data;
     } catch (error) {
       console.error('Error fetching candidats:', error);

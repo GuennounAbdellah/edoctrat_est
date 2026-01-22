@@ -87,6 +87,7 @@ export interface PostulationResponse {
   professeurNom?: string;
   professeurPrenom?: string;
   pathFile?: string;
+  confirmed?: boolean;
   etat?: string;
   accepted?: boolean;
   rejected?: boolean;
@@ -165,6 +166,12 @@ export const deletePostulation = async (id: number): Promise<void> => {
   await apiClient.delete(`/api/candidat-postules/${id}`);
 };
 
+// Confirm selected postulations
+export const confirmPostulations = async (postulationIds: number[]): Promise<ResultDTO<PostulationResponse>> => {
+  const response = await apiClient.post<ResultDTO<PostulationResponse>>('/api/candidat-postules/confirm', { postulationIds });
+  return response.data;
+};
+
 // Published subjects API calls
 export const getPublishedSubjects = async (limit = 10, offset = 0): Promise<ResultDTO<SujetResponse>> => {
   const response = await apiClient.get<ResultDTO<SujetResponse>>(`/api/get-published-subjects?limit=${limit}&offset=${offset}`);
@@ -183,5 +190,6 @@ export default {
   getCandidatPostulations,
   createPostulation,
   deletePostulation,
+  confirmPostulations,
   getPublishedSubjects
 };

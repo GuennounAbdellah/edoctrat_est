@@ -18,6 +18,10 @@ public class Postuler {
     @Column(length = 100)
     private String pathFile;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean confirmed = false;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "candidat_candidat_fk", nullable = false)
     private Candidat candidat;

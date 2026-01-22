@@ -4,4 +4,7 @@ export interface DirecteurLabo {
   prenom: string;
   email: string;
   departement: string;
+  laboratoireId?: number;
+  laboratoireNom?: string;
+  laboratoireDescription?: string;
 }

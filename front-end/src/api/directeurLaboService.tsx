@@ -12,6 +12,7 @@ import { SujetResponse } from '@/models/SujetResponse';
 import { CommissionResponse } from '@/models/CommissionResponse';
 import { ExaminerResponse } from '@/models/ExaminerResponse';
 import { PostulerJoinedResponse } from '@/models/PostulerJoinedResponse';
+import { DirecteurLabo } from '@/models/DirecteurLabo';
 
 // Response interfaces matching backend DTOs
 interface BaseResponse<T> {
@@ -37,6 +38,17 @@ interface PaginatedResponse<T> {
 
 
 export const DirecteurLaboService = {
+
+  // Get current directeur labo information including laboratory
+  getDirecteurLaboInfo: async (): Promise<DirecteurLabo> => {
+    try {
+      const response = await apiClient.get<DirecteurLabo>('/api/directeur-labo-info/');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching directeur labo info:', error);
+      throw error;
+    }
+  },
 
   // Get candidat by ID
   getCandidatById: async (id: number): Promise<CandidatResponse> => {
@@ -119,6 +131,25 @@ export const DirecteurLaboService = {
       return response.data;
     } catch (error) {
       console.error('Error creating commission:', error);
+      throw error;
+    }
+  },
+
+  // Create commission with full details (participants, subjects, candidates)
+  createCommissionWithDetails: async (commissionData: {
+    dateCommission: string;
+    heure: string;
+    lieu: string;
+    labo: number;
+    participantIds: number[];
+    sujetIds: number[];
+    candidatCnes: string[];
+  }): Promise<CommissionResponse> => {
+    try {
+      const response = await apiClient.post<CommissionResponse>('/api/commission-with-details/', commissionData);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating commission with details:', error);
       throw error;
     }
   },
@@ -223,9 +254,15 @@ export const DirecteurLaboService = {
   // Get all existing formations
   getFormations: async (): Promise<FormationDoctorale[]> => {
     try {
-      const response = await apiClient.get<FormationDoctorale[]>('/api/formations/');
+      const response = await apiClient.get<FormationDoctorale[] | ResultResponse<FormationDoctorale>>('/api/formations/');
       console.log('getFormations response:', response.data);
-      return response.data;
+      // Handle both array and paginated response formats
+      if (Array.isArray(response.data)) {
+        return response.data;
+      } else if (response.data && 'results' in response.data) {
+        return response.data.results;
+      }
+      return [];
     } catch (error) {
       console.error('Error fetching formations:', error);
       throw error;
@@ -312,9 +349,15 @@ export const DirecteurLaboService = {
   //GET all professeurs
   getProfesseurs: async (): Promise<Professeur[]> => {
     try {
-      const response = await apiClient.get<Professeur[]>('/api/get-professeurs/');
+      const response = await apiClient.get<Professeur[] | ResultResponse<Professeur>>('/api/get-professeurs/');
       console.log('getProfesseurs response:', response.data);
-      return response.data;
+      // Handle both array and paginated response formats
+      if (Array.isArray(response.data)) {
+        return response.data;
+      } else if (response.data && 'results' in response.data) {
+        return response.data.results;
+      }
+      return [];
     } catch (error) {
       console.error('Error fetching professeurs:', error);
       throw error;

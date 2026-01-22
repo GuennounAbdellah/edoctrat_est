@@ -381,6 +381,53 @@ public class CandidatController {
         }
     }
 
+    // POST /api/candidat-postules/confirm - Confirm selected sujets
+    @PostMapping("/candidat-postules/confirm")
+    public ResponseEntity<ResultDTO<PostulerResponse>> confirmPostulations(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, Object> body) {
+        try {
+            String token = authHeader.replace("Bearer ", "");
+            String username = jwtTokenService.getUsernameFromToken(token);
+            User user = userService.findByUsername(username).orElse(null);
+            if (user == null) {
+                return ResponseEntity.status(401).build();
+            }
+
+            Candidat candidat = candidatService.findByUser(user).orElse(null);
+            if (candidat == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Get postulation IDs to confirm from request body
+            @SuppressWarnings("unchecked")
+            List<Integer> postulationIds = (List<Integer>) body.get("postulationIds");
+            if (postulationIds == null || postulationIds.isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            // Confirm each postulation
+            List<Postuler> confirmedPostulations = new java.util.ArrayList<>();
+            for (Integer postulationId : postulationIds) {
+                Postuler postuler = postulerService.findById(postulationId.longValue()).orElse(null);
+                if (postuler != null && postuler.getCandidat().getId().equals(candidat.getId())) {
+                    postuler.setConfirmed(true);
+                    Postuler updated = postulerService.update(postuler.getId(), postuler);
+                    confirmedPostulations.add(updated);
+                }
+            }
+
+            List<PostulerResponse> responses = confirmedPostulations.stream()
+                    .map(dtoMapper::toPostulerResponse)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(ResultDTO.of(responses));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(400).build();
+        }
+    }
+
     @PostMapping("/add-postulation")
     public ResponseEntity<Postuler> addPostulation(@RequestParam("candidatId") Long candidatId,
             @RequestParam("sujetId") Long sujetId,

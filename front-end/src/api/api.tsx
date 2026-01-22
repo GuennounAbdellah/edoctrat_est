@@ -12,9 +12,15 @@ const instance = axios.create({
 // Request interceptor
 instance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('accessToken');
+    // Try multiple token storage keys for compatibility
+    const token = localStorage.getItem('accessToken') || 
+                  localStorage.getItem('access_token') || 
+                  localStorage.getItem('token');
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      console.warn('No authentication token found in localStorage');
     }
     return config;
   },
@@ -43,10 +49,16 @@ instance.interceptors.response.use(
           // For now, just redirect to login
           console.log('Authentication expired. Redirecting to login');
           localStorage.removeItem('accessToken');
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
           window.location.href = '/login';
           return Promise.reject(error);
         } catch (refreshError) {
           localStorage.removeItem('accessToken');
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
           window.location.href = '/login';
           return Promise.reject(refreshError);
         }
@@ -54,10 +66,22 @@ instance.interceptors.response.use(
       
       // Add specific error handling for different status codes
       switch (status) {
-        case 403:
+        case 403: {
           console.error('Access denied. You do not have permission to access this resource.');
-          error.friendlyMessage = "Accès refusé. Vous n'avez pas les permissions nécessaires pour cette action.";
+          console.error('Please check if you are logged in and have a valid authentication token.');
+          error.friendlyMessage = "Accès refusé. Veuillez vous connecter pour accéder à cette ressource.";
+          // Check if token exists
+          const token = localStorage.getItem('accessToken') || 
+                        localStorage.getItem('access_token') || 
+                        localStorage.getItem('token');
+          if (!token) {
+            console.error('No authentication token found. Redirecting to login...');
+            setTimeout(() => {
+              window.location.href = '/login';
+            }, 2000);
+          }
           break;
+        }
         case 404:
           error.friendlyMessage = "La ressource demandée n'existe pas.";
           break;

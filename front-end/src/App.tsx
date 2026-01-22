@@ -26,7 +26,8 @@ import {
   SujetsPage as ProfSujetsPage,
   CommissionsPage as ProfCommissionsPage,
   ResultatsPage as ProfResultatsPage,
-  InscritsPage as ProfInscritsPage
+  InscritsPage as ProfInscritsPage,
+  MesCandidatsPage as ProfMesCandidatsPage
 } from "./pages/professeur/pages";
 
 // Candidat imports
@@ -93,6 +94,7 @@ const App = () => (
             <Route path="commissions" element={<ProfCommissionsPage />} />
             <Route path="resultats" element={<ProfResultatsPage />} />
             <Route path="inscrits" element={<ProfInscritsPage />} />
+            <Route path="mes-candidats" element={<ProfMesCandidatsPage />} />
           </Route>
           
           {/* Candidat nested routes */}

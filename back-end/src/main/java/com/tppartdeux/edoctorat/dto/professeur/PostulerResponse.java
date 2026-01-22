@@ -16,6 +16,7 @@ import lombok.NoArgsConstructor;
 public class PostulerResponse {
     private Long id;
     private String pathFile;
+    private Boolean confirmed;
     private SujetResponse sujet;
     private CandidatResponse candidat;
 }

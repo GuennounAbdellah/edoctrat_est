@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -41,6 +42,7 @@ import CommissionsTab from './CommissionsTab';
 import ResultsTab from './ResultsTab';
 import PreselectionTab from './PreselectionTab';
 import PvGlobalTab from './PvGlobalTab';
+import CreateCommissionWizard from './CreateCommissionWizard';
 import Header from '../../components/layout/Header';
 
 // Import models
@@ -55,11 +57,13 @@ import { Diplome } from '@/models/Diplome';
 
 // Import services
 import { DirecteurLaboService } from '@/api/directeurLaboService';
+import { useToast } from '@/hooks/use-toast';
 
 const DirecteurLaboInterface: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'candidats' | 'sujets' | 'commissions' | 'preselection' | 'resultats' | 'pv'>('candidats');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
   
   // State for logged-in director
   const [loggedDirector, setLoggedDirector] = useState<DirecteurLabo | null>(null);
@@ -85,6 +89,7 @@ const DirecteurLaboInterface: React.FC = () => {
   // Form states
   const [sujetFormData, setSujetFormData] = useState({
     titre: '',
+    description: '',
     directeur: '',
     coDirecteur: '',
     formationDoctorale: ''
@@ -98,41 +103,58 @@ const DirecteurLaboInterface: React.FC = () => {
   });
 
   useEffect(() => {
-    // Fetch logged-in director data from localStorage or auth context
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        const userData = JSON.parse(storedUser);
-        const directorData: DirecteurLabo = {
-          id: userData.id,
-          nom: userData.nom || userData.lastName,
-          prenom: userData.prenom || userData.firstName,
-          email: userData.email,
-          departement: userData.departement || 'Informatique'
-        };
-        setLoggedDirector(directorData);
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-        // Fallback to a default director
-        setLoggedDirector({
-          id: 1,
-          nom: 'Directeur',
-          prenom: 'Laboratoire',
-          email: 'directeur@labo.ma',
-          departement: 'Informatique'
-        });
-      }
-    } else {
-      // If no user data in localStorage, use a default director
-      setLoggedDirector({
-        id: 1,
-        nom: 'Directeur',
-        prenom: 'Laboratoire',
-        email: 'directeur@labo.ma',
-        departement: 'Informatique'
+    // Check authentication before loading
+    const token = localStorage.getItem('accessToken') || 
+                  localStorage.getItem('access_token') || 
+                  localStorage.getItem('token');
+    
+    if (!token) {
+      console.error('No authentication token found. User needs to login.');
+      toast({
+        title: "Authentification requise",
+        description: "Veuillez vous connecter pour accéder à cette page.",
+        variant: "destructive",
       });
+      // Redirect to login after a short delay
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 2000);
+      return;
     }
     
+    // Fetch logged-in director data from backend
+    const fetchDirectorInfo = async () => {
+      try {
+        const directorData = await DirecteurLaboService.getDirecteurLaboInfo();
+        setLoggedDirector(directorData);
+      } catch (error) {
+        console.error('Error fetching director info:', error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de récupérer les informations du directeur. Veuillez vous reconnecter.",
+          variant: "destructive",
+        });
+        // Fallback to localStorage if backend call fails
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          try {
+            const userData = JSON.parse(storedUser);
+            const fallbackDirector: DirecteurLabo = {
+              id: userData.id,
+              nom: userData.nom || userData.lastName,
+              prenom: userData.prenom || userData.firstName,
+              email: userData.email,
+              departement: userData.departement || 'Informatique'
+            };
+            setLoggedDirector(fallbackDirector);
+          } catch (e) {
+            console.error('Error parsing localStorage user data:', e);
+          }
+        }
+      }
+    };
+    
+    fetchDirectorInfo();
     fetchAllData();
     fetchProfesseurs(); // Fetch professors for dropdowns
   }, []);
@@ -269,23 +291,31 @@ const DirecteurLaboInterface: React.FC = () => {
         titre: sujetFormData.titre,
         professeur: { id: parseInt(sujetFormData.directeur) } as Professeur,
         formationDoctorale: { id: parseInt(sujetFormData.formationDoctorale) } as FormationDoctorale,
-        description: '',
+        description: sujetFormData.description,
         motsCles: '',
         dateDepot: new Date().toISOString().split('T')[0],
         publier: false,
         pathFile: '',
-        coDirecteur: sujetFormData.coDirecteur ? { id: parseInt(sujetFormData.coDirecteur) } as Professeur : null  // Add coDirecteur field
+        coDirecteur: sujetFormData.coDirecteur ? { id: parseInt(sujetFormData.coDirecteur) } as Professeur : null
       };
       
       await DirecteurLaboService.createSujet(newSujet);
-      setSujetFormData({ titre: '', directeur: '', coDirecteur: '', formationDoctorale: '' });
+      toast({
+        title: "Succès",
+        description: "Le sujet a été créé avec succès",
+      });
+      setSujetFormData({ titre: '', description: '', directeur: '', coDirecteur: '', formationDoctorale: '' });
       setIsSujetDialogOpen(false);
       await fetchSujets();
     } catch (error) {
       console.error('Error creating sujet:', error);
-      setSujetFormData({ titre: '', directeur: '', coDirecteur: '', formationDoctorale: '' });
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de la création du sujet",
+        variant: "destructive",
+      });
+      setSujetFormData({ titre: '', description: '', directeur: '', coDirecteur: '', formationDoctorale: '' });
       setIsSujetDialogOpen(false);
-      await fetchSujets();
     }
   };
 
@@ -654,6 +684,17 @@ const DirecteurLaboInterface: React.FC = () => {
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="description" className="text-right">Description</Label>
+              <Textarea
+                id="description"
+                value={sujetFormData.description}
+                onChange={(e) => setSujetFormData({...sujetFormData, description: e.target.value})}
+                className="col-span-3"
+                placeholder="Description du sujet de recherche"
+                rows={4}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="directeur" className="text-right">Directeur</Label>
               <Select
                 value={sujetFormData.directeur}
@@ -738,55 +779,18 @@ const DirecteurLaboInterface: React.FC = () => {
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setIsSujetDialogOpen(false)}>Annuler</Button>
-            <Button onClick={handleCreateSujet}>Enregistrer</Button>
+            <Button onClick={handleCreateSujet} disabled={!sujetFormData.titre || !sujetFormData.directeur || !sujetFormData.formationDoctorale}>Enregistrer</Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog pour créer une commission */}
-      <Dialog open={isCommissionDialogOpen} onOpenChange={setIsCommissionDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Créer une nouvelle commission</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="dateCommission" className="text-right">Date</Label>
-              <Input 
-                id="dateCommission" 
-                type="date"
-                value={commissionFormData.dateCommission}
-                onChange={(e) => setCommissionFormData({...commissionFormData, dateCommission: e.target.value})}
-                className="col-span-3" 
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="heure" className="text-right">Heure</Label>
-              <Input 
-                id="heure" 
-                type="time"
-                value={commissionFormData.heure}
-                onChange={(e) => setCommissionFormData({...commissionFormData, heure: e.target.value})}
-                className="col-span-3" 
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="lieu" className="text-right">Lieu</Label>
-              <Input 
-                id="lieu" 
-                value={commissionFormData.lieu}
-                onChange={(e) => setCommissionFormData({...commissionFormData, lieu: e.target.value})}
-                className="col-span-3" 
-                placeholder="Lieu de la commission"
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsCommissionDialogOpen(false)}>Annuler</Button>
-            <Button onClick={handleCreateCommission}>Créer</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Commission Creation Wizard */}
+      <CreateCommissionWizard
+        isOpen={isCommissionDialogOpen}
+        onClose={() => setIsCommissionDialogOpen(false)}
+        onSuccess={fetchCommissions}
+        laboratoireId={loggedDirector?.laboratoireId}
+      />
 
       {/* Dialog pour afficher les détails du candidat */}
       <Dialog open={isCandidateDetailDialogOpen} onOpenChange={() => setIsCandidateDetailDialogOpen(false)}>
@@ -806,7 +810,7 @@ const DirecteurLaboInterface: React.FC = () => {
                         {selectedCandidate.pathPhoto ? (
                           <img 
                             src={selectedCandidate.pathPhoto} 
-                            alt={`${selectedCandidate.prenom} ${selectedCandidate.nom}`}
+                            alt={`${selectedCandidate.prenom} {selectedCandidate.nom}`}
                             className="w-full h-full object-cover"
                           />
                         ) : (
