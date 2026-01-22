@@ -79,6 +79,58 @@ public class DirecteurLaboController {
         }
     }
 
+    // GET /api/my-laboratory-id/ - Get laboratory ID of current directeur
+    @GetMapping("/my-laboratory-id/")
+    public ResponseEntity<?> getMyLaboratoryId(@RequestHeader("Authorization") String authHeader) {
+        try {
+            String token = authHeader.replace("Bearer ", "");
+            String username = jwtTokenService.getUsernameFromToken(token);
+            User user = userService.findByUsername(username).orElse(null);
+            if (user == null) {
+                return ResponseEntity.status(401).body(Map.of(
+                    "error", "Unauthorized",
+                    "message", "Invalid authentication token"
+                ));
+            }
+
+            Professeur professeur = professeurService.findByUser(user).orElse(null);
+            if (professeur == null) {
+                return ResponseEntity.status(404).body(Map.of(
+                    "error", "Not Found",
+                    "message", "Professeur profile not found for this user"
+                ));
+            }
+
+            // If professeur has a direct laboratory association, use it
+            if (professeur.getLabo() != null) {
+                return ResponseEntity.ok(Map.of(
+                    "laboratoireId", professeur.getLabo().getId(),
+                    "laboratoireNom", professeur.getLabo().getNomLaboratoire()
+                ));
+            }
+
+            // Otherwise, try to find laboratory from professeur's subjects
+            List<Sujet> sujets = sujetService.findByProfesseur(professeur);
+            if (!sujets.isEmpty() && sujets.get(0).getFormationDoctorale() != null) {
+                // The formation doctorale might have laboratory info
+                return ResponseEntity.ok(Map.of(
+                    "laboratoireId", sujets.get(0).getFormationDoctorale().getId(),
+                    "message", "Laboratory ID derived from subjects"
+                ));
+            }
+
+            return ResponseEntity.status(404).body(Map.of(
+                "error", "Not Found",
+                "message", "No laboratory found for this directeur"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "Internal Server Error",
+                "message", "Error retrieving laboratory information: " + e.getMessage()
+            ));
+        }
+    }
+
     @GetMapping("/labo-candidats-joined/")
     public ResponseEntity<List<PostulerJoinedResponse>> getCandidatsJoined(
             @RequestParam(required = false) Integer limit,

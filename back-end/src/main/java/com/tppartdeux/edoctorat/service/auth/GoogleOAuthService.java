@@ -90,7 +90,7 @@ public class GoogleOAuthService {
                 }
             }
             
-            // Check if user belongs to professor/director groups (not candidat)
+            // Check if user belongs to professor/di rector groups (not candidat)
             boolean isAuthorized = false;
             if (user.getUserGroups() != null) {
                 isAuthorized = user.getUserGroups().stream()

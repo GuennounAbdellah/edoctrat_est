@@ -50,6 +50,17 @@ export const DirecteurLaboService = {
     }
   },
 
+  // Get laboratory ID of current directeur
+  getMyLaboratoryId: async (): Promise<{ laboratoireId: number; laboratoireNom?: string }> => {
+    try {
+      const response = await apiClient.get<{ laboratoireId: number; laboratoireNom?: string }>('/api/my-laboratory-id/');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching my laboratory id:', error);
+      throw error;
+    }
+  },
+
   // Get candidat by ID
   getCandidatById: async (id: number): Promise<CandidatResponse> => {
     try {

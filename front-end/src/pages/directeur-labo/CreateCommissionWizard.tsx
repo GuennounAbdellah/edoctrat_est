@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { ChevronLeft, ChevronRight, Calendar, Users, BookOpen, GraduationCap, Check } from 'lucide-react';
 import { Professeur } from '@/models/Professeur';
 import { SujetResponse } from '@/models/SujetResponse';
+import { PostulerJoinedResponse } from '@/models/PostulerJoinedResponse';
 import { DirecteurLaboService } from '@/api/directeurLaboService';
 import { useToast } from '@/hooks/use-toast';
 
@@ -38,6 +39,14 @@ const CreateCommissionWizard: React.FC<CreateCommissionWizardProps> = ({
     const { toast } = useToast();
     const [currentStep, setCurrentStep] = useState(1);
     const [loading, setLoading] = useState(false);
+
+    // Log when wizard opens
+    useEffect(() => {
+        if (isOpen) {
+            console.log('=== COMMISSION WIZARD OPENED ===');
+            console.log('Lab ID:', laboratoireId);
+        }
+    }, [isOpen, laboratoireId]);
 
     // Step 1: Basic info
     const [formData, setFormData] = useState({
@@ -86,29 +95,47 @@ const CreateCommissionWizard: React.FC<CreateCommissionWizardProps> = ({
         setLoading(true);
         try {
             const allCandidates: Candidate[] = [];
-            for (const sujetId of selectedSujets) {
-                try {
-                    const response = await DirecteurLaboService.getSujetCandidats(sujetId);
-                    const sujet = allSujets.find(s => s.id === sujetId);
-                    if (response.results) {
-                        response.results.forEach(examiner => {
-                            if (examiner.candidat && !allCandidates.find(c => c.cne === examiner.cne)) {
-                                allCandidates.push({
-                                    cne: examiner.cne || examiner.candidat.cne,
-                                    nom: examiner.candidat.nom,
-                                    prenom: examiner.candidat.prenom,
-                                    email: examiner.candidat.email || '',
-                                    sujetId: sujetId,
-                                    sujetTitre: sujet?.titre || ''
-                                });
-                            }
+            console.log('Fetching candidates for sujets:', selectedSujets);
+            
+            // Get all joined candidates (candidats who posted for subjects)
+            const joinedData = await DirecteurLaboService.getJoinedCandidats();
+            console.log('All joined candidats data:', joinedData);
+            
+            // Filter to get only candidates for selected subjects
+            const joinedDataMap = new Map<string, PostulerJoinedResponse>();
+            
+            for (const item of joinedData) {
+                // Extract sujet ID from the subject name or use a different identifier
+                // Since we don't have sujetId in PostulerJoinedResponse, we'll match by sujet title
+                const sujetTitle = item.sujetPostule;
+                
+                // Find the corresponding sujet ID from allSujets
+                const sujet = allSujets.find(s => s.titre === sujetTitle);
+                
+                if (sujet && selectedSujets.includes(sujet.id)) {
+                    const cne = item.cne;
+                    
+                    // Use Map to avoid duplicates (same candidate for same sujet)
+                    const key = `${cne}-${sujet.id}`;
+                    if (!joinedDataMap.has(key)) {
+                        joinedDataMap.set(key, item);
+                        allCandidates.push({
+                            cne: cne,
+                            nom: item.nom,
+                            prenom: item.prenom,
+                            email: '',  // Email not provided in PostulerJoinedResponse
+                            sujetId: sujet.id,
+                            sujetTitre: sujetTitle
                         });
                     }
-                } catch (e) {
-                    console.error(`Error fetching candidates for sujet ${sujetId}:`, e);
                 }
             }
+            
+            console.log('Final candidates list:', allCandidates);
             setAvailableCandidates(allCandidates);
+        } catch (e) {
+            console.error('Error fetching candidates:', e);
+            setAvailableCandidates([]);
         } finally {
             setLoading(false);
         }
@@ -196,13 +223,49 @@ const CreateCommissionWizard: React.FC<CreateCommissionWizardProps> = ({
     };
 
     const handleSubmit = async () => {
+        console.log('=== SUBMIT BUTTON CLICKED ===');
+        
+        let finalLaboratoireId = laboratoireId;
+        
+        // If laboratoireId is not provided, try to fetch it
+        if (!finalLaboratoireId) {
+            console.log('Trying to fetch laboratory ID from backend');
+            try {
+                const labData = await DirecteurLaboService.getMyLaboratoryId();
+                finalLaboratoireId = labData.laboratoireId;
+                console.log('Laboratory ID fetched from backend:', finalLaboratoireId);
+            } catch (e) {
+                console.error('Could not fetch laboratory ID:', e);
+            }
+        }
+        
+        console.log('Current state:', {
+            laboratoireId: finalLaboratoireId,
+            selectedCandidates,
+            selectedSujets,
+            selectedProfesseurs,
+            formData
+        });
+
         setLoading(true);
         try {
             // Check if laboratory ID is available
-            if (!laboratoireId) {
+            if (!finalLaboratoireId) {
+                console.error('Laboratory ID is missing even after trying all sources');
                 toast({
                     title: "Erreur",
-                    description: "ID du laboratoire non disponible. Veuillez vous reconnecter.",
+                    description: "Impossible de déterminer le laboratoire. Assurez-vous que vous êtes bien associé à un laboratoire.",
+                    variant: "destructive",
+                });
+                setLoading(false);
+                return;
+            }
+
+            if (selectedCandidates.length === 0) {
+                console.error('No candidates selected');
+                toast({
+                    title: "Erreur",
+                    description: "Veuillez sélectionner au moins un candidat",
                     variant: "destructive",
                 });
                 setLoading(false);
@@ -213,13 +276,15 @@ const CreateCommissionWizard: React.FC<CreateCommissionWizardProps> = ({
                 dateCommission: formData.dateCommission,
                 heure: formData.heure,
                 lieu: formData.lieu,
-                labo: laboratoireId,
+                labo: finalLaboratoireId,
                 participantIds: selectedProfesseurs,
                 sujetIds: selectedSujets,
                 candidatCnes: selectedCandidates
             };
 
-            await DirecteurLaboService.createCommissionWithDetails(commissionData);
+            console.log('Submitting commission data:', commissionData);
+            const response = await DirecteurLaboService.createCommissionWithDetails(commissionData);
+            console.log('Commission created successfully:', response);
             
             toast({
                 title: "Succès",
@@ -229,11 +294,17 @@ const CreateCommissionWizard: React.FC<CreateCommissionWizardProps> = ({
             resetForm();
             onSuccess();
             onClose();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error creating commission:', error);
+            console.error('Error response:', error?.response);
+            const errorMessage = error?.response?.data?.detail || 
+                                error?.response?.data?.message || 
+                                error?.message || 
+                                "Erreur lors de la création de la commission";
+            
             toast({
                 title: "Erreur",
-                description: "Erreur lors de la création de la commission",
+                description: errorMessage,
                 variant: "destructive",
             });
         } finally {
@@ -500,12 +571,24 @@ const CreateCommissionWizard: React.FC<CreateCommissionWizardProps> = ({
                             <ChevronRight className="w-4 h-4 ml-2" />
                         </Button>
                     ) : (
-                        <Button
-                            onClick={handleSubmit}
-                            disabled={!canProceedToNextStep() || loading}
-                        >
-                            {loading ? 'Création...' : 'Créer la commission'}
-                        </Button>
+                        <div className="flex flex-col items-end gap-2">
+                            {selectedCandidates.length === 0 && availableCandidates.length > 0 && (
+                                <p className="text-xs text-amber-600">Sélectionnez au moins un candidat</p>
+                            )}
+                            {availableCandidates.length === 0 && (
+                                <p className="text-xs text-amber-600">Aucun candidat disponible</p>
+                            )}
+                            <Button
+                                onClick={() => {
+                                    console.log('Button clicked, calling handleSubmit');
+                                    handleSubmit();
+                                }}
+                                disabled={selectedCandidates.length === 0 || loading}
+                                className="min-w-[180px]"
+                            >
+                                {loading ? 'Création...' : 'Créer la commission'}
+                            </Button>
+                        </div>
                     )}
                 </div>
             </DialogContent>

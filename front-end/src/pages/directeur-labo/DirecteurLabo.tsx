@@ -126,6 +126,7 @@ const DirecteurLaboInterface: React.FC = () => {
     const fetchDirectorInfo = async () => {
       try {
         const directorData = await DirecteurLaboService.getDirecteurLaboInfo();
+        console.log('Director data received:', directorData);
         setLoggedDirector(directorData);
       } catch (error) {
         console.error('Error fetching director info:', error);
@@ -144,7 +145,8 @@ const DirecteurLaboInterface: React.FC = () => {
               nom: userData.nom || userData.lastName,
               prenom: userData.prenom || userData.firstName,
               email: userData.email,
-              departement: userData.departement || 'Informatique'
+              departement: userData.departement || 'Informatique',
+              laboratoireId: userData.laboratoireId
             };
             setLoggedDirector(fallbackDirector);
           } catch (e) {
@@ -230,14 +232,14 @@ const DirecteurLaboInterface: React.FC = () => {
   };
 
   const fetchCommissions = async () => {
-    // try {
-    //   const response = await DirecteurLaboService.getAllCommissions();
-    //   console.log('Fetched commissions:', response);
-    //   setCommissions(response.results || []);
-    // } catch (error) {
-    //   console.error('Error fetching commissions:', error);
-    //   setCommissions([]);
-    // }
+    try {
+      const response = await DirecteurLaboService.getAllCommissions();
+      console.log('Fetched commissions:', response);
+      setCommissions(response.results || []);
+    } catch (error) {
+      console.error('Error fetching commissions:', error);
+      setCommissions([]);
+    }
   };
 
 
@@ -787,8 +789,14 @@ const DirecteurLaboInterface: React.FC = () => {
       {/* Commission Creation Wizard */}
       <CreateCommissionWizard
         isOpen={isCommissionDialogOpen}
-        onClose={() => setIsCommissionDialogOpen(false)}
-        onSuccess={fetchCommissions}
+        onClose={() => {
+          console.log('Closing commission wizard');
+          setIsCommissionDialogOpen(false);
+        }}
+        onSuccess={() => {
+          console.log('Commission created successfully, refreshing...');
+          fetchCommissions();
+        }}
         laboratoireId={loggedDirector?.laboratoireId}
       />
 
