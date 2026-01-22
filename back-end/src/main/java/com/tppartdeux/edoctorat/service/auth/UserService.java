@@ -47,7 +47,20 @@ public class UserService {
     private UserGroupRepository userGroupRepository;
 
     @Autowired
-    private EmailSenderService emailSenderService;
+    private SendGridEmailService emailSenderService;
+    
+    @Autowired
+    private GoogleOAuthService googleOAuthService;
+
+
+    /**
+     * Vérifie et authentifie un professeur/directeur via Google OAuth
+     * Seuls les professeurs, directeurs CED, directeurs labo et directeurs pole peuvent utiliser OAuth
+     * Les candidats DOIVENT utiliser email/password
+     */
+    public Optional<AuthProfResponse> verifyProfessor(String token) {
+        return googleOAuthService.authenticateWithGoogle(token);
+    }
 
     // Unified login for all actor types
     public Optional<TokenResponse> unifiedLogin(String email, String password) {
@@ -71,6 +84,12 @@ public class UserService {
             return Optional.empty();
         }
             
+        // Check if user account is active
+        if (!user.getIsActive()) {
+            System.err.println("!!!!!!!User account is not active (email not verified): " + email);
+            throw new RuntimeException("EMAIL_NOT_VERIFIED");
+        }
+        
         // Null-safe check for userGroups
         if (user.getUserGroups() == null || user.getUserGroups().isEmpty()) {
             System.err.println("!!!!!!!User has no groups assigned: " + email);
@@ -107,63 +126,6 @@ public class UserService {
         return Optional.of(response);
     }
 
-    // Verify professor via Google token (simplified - in production use Google API)
-    public Optional<AuthProfResponse> verifyProfessor(String googleIdToken) {
-        // In production, verify the Google ID token with Google's API
-        // For now, we'll simulate by looking up by email extracted from token
-        // This is a placeholder implementation
-        try {
-            // Simulated: In real implementation, decode Google token to get email
-            String email = extractEmailFromToken(googleIdToken);
-            User user = userRepository.findByEmail(email);
-            if (user == null) {
-                return Optional.empty();
-            }
-            
-            boolean isProfesseur = user.getUserGroups().stream()
-                    .anyMatch(userGroup -> userGroup.getGroup().getName().equalsIgnoreCase("professeur"));
-            if (!isProfesseur) {
-                return Optional.empty();
-            }
-            
-            Professeur professeur = professeurRepository.findByUser(user).orElse(null);
-            
-            String accessToken = jwtTokenService.generateAccessToken(
-                    user.getUsername(), 
-                    user.getUserGroups().stream()
-                            .map(userGroup -> userGroup.getGroup().getName())
-                            .toList()
-            );
-            String refreshToken = jwtTokenService.generateRefreshToken(user.getUsername());
-            
-            java.util.List<String> userGroups = user.getUserGroups().stream()
-                    .map(g -> g.getGroup().getName())
-                    .toList();
-                String primaryRole = userGroups.isEmpty() ? "professeur" : userGroups.get(0);
-                
-                return Optional.of(AuthProfResponse.builder()
-                    .email(user.getEmail())
-                    .nom(user.getLastName())
-                    .prenom(user.getFirstName())
-                    .pathPhoto(professeur != null ? professeur.getPathPhoto() : null)
-                    .groups(userGroups)
-                    .role(primaryRole)
-                    .access(accessToken)
-                    .refresh(refreshToken)
-                    .grade(professeur != null ? professeur.getGrade() : null)
-                    .nombreProposer(professeur != null ? professeur.getNombreProposer() : 0)
-                    .nombreEncadrer(professeur != null ? professeur.getNombreEncadrer() : 0)
-                    .build());
-        } catch (Exception e) {
-            return Optional.empty();
-        }
-    }
-    
-    private String extractEmailFromToken(String token) {
-        // Placeholder: In production, decode JWT or verify with Google
-        // For testing, you could pass email directly
-        return token; // Simplified for development
-    }
 
     // Get user info from JWT token
     public Optional<UserInfoResponse> getUserInfoFromToken(String accessToken, String role) {
@@ -356,7 +318,21 @@ public class UserService {
         
         System.out.println("!!!!!!!registerCandidat - Starting registration for email: " + email);
         
-        // Check if email already exists using the explicit COUNT query
+        // Validation des champs requis
+        if (email == null || email.trim().isEmpty()) {
+            throw new RuntimeException("Email is required");
+        }
+        if (password == null || password.trim().isEmpty()) {
+            throw new RuntimeException("Password is required");
+        }
+        if (nom == null || nom.trim().isEmpty()) {
+            throw new RuntimeException("Nom is required");
+        }
+        if (prenom == null || prenom.trim().isEmpty()) {
+            throw new RuntimeException("Prenom is required");
+        }
+        
+        // Check if email already exists
         if (userRepository.existsByEmail(email)) {
             System.err.println("!!!!!!!registerCandidat - User already exists with email: " + email);
             throw new RuntimeException("Email already registered");
@@ -377,7 +353,7 @@ public class UserService {
                 .dateJoined(LocalDateTime.now())
                 .build();
         
-        userRepository.save(user);
+        user = userRepository.save(user);
         
         // Assign candidat group - create if it doesn't exist
         Group candidatGroup = groupRepository.findByName("candidat")
@@ -395,7 +371,7 @@ public class UserService {
         // Generate verification token (JWT with 24h expiry)
         String verificationToken = jwtTokenService.generateEmailVerificationToken(email);
         
-        // Send verification email
+        // Send verification email - don't fail registration if email fails
         try {
             String fullName = prenom + " " + nom;
             emailSenderService.sendEmailVerification(email, fullName, verificationToken);
@@ -404,12 +380,8 @@ public class UserService {
             System.err.println("⚠️ Failed to send verification email to: " + email);
             System.err.println("Error details: " + e.getMessage());
             e.printStackTrace();
-            // Don't delete the user - they can request a new verification email
-            // The user is created but inactive, they can use resend-verification endpoint
-            System.err.println("⚠️ User created but email verification failed. User ID: " + user.getId());
-            System.err.println("⚠️ User can use /api/resend-verification/ endpoint to receive the email");
-            // Throw exception to inform the caller, but user remains in database
-            throw new RuntimeException("Failed to send verification email: " + e.getMessage());
+            // DON'T throw exception - user is created, they can resend verification
+            System.err.println("⚠️ User created successfully. User can use /api/resend-verification/ endpoint");
         }
     }
 
@@ -546,22 +518,10 @@ public class UserService {
 
     }
 
-/*
-    //CRUD Functions
-    // Create
-    public User create(User user) {
-        return userRepository.save(user);
-    }
-
-    // Read
-    public List<User> findAll() {
-        return userRepository.findAll();
-    }
-
-
     public Optional<User> findByEmail(String email) {
         try {
-            return Optional.of(userRepository.findByEmail(email));
+            User user = userRepository.findByEmail(email);
+            return Optional.ofNullable(user);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -575,45 +535,6 @@ public class UserService {
     public boolean existsByEmail(String email) {
         return userRepository.existsByEmail(email);
     }
-
-    // Update
-    public User update(Integer id, User userDetails) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
-        
-        user.setUsername(userDetails.getUsername());
-        user.setPassword(userDetails.getPassword());
-        user.setFirstName(userDetails.getFirstName());
-        user.setLastName(userDetails.getLastName());
-        user.setEmail(userDetails.getEmail());
-        user.setIsActive(userDetails.getIsActive());
-        user.setIsStaff(userDetails.getIsStaff());
-        user.setIsSuperuser(userDetails.getIsSuperuser());
-        user.setLastLogin(userDetails.getLastLogin());
-        
-        return userRepository.save(user);
-    }
-
-    // Delete
-    public void delete(Integer id) {
-        if (!userRepository.existsById(id)) {
-            throw new RuntimeException("User not found with id: " + id);
-        }
-        userRepository.deleteById(id);
-    }
-
-    public void deleteAll() {
-        userRepository.deleteAll();
-    }
-
-    public long count() {
-        return userRepository.count();
-    }
-
-
-    
-    
-    */
     public void createExampleUsers(String email, String password) {
         if (userRepository.existsByEmail(email)) {
             System.out.println("Example user already exists with email: " + email);
@@ -667,5 +588,75 @@ public class UserService {
         userGroupRepository.save(userGroup);
         
         System.out.println("Directeur CED user created with email: " + email);
+    }
+    
+    public void createProfesseurUser(String email, String password, String firstName, String lastName) {
+        if (userRepository.existsByEmail(email)) {
+            System.out.println("Professeur user already exists with email: " + email);
+            return;
+        }
+        
+        User user = User.builder()
+                .username(email)
+                .email(email)
+                .password(passwordEncoder.encode(password))
+                .firstName(firstName)
+                .lastName(lastName)
+                .isActive(true)
+                .isStaff(true)
+                .isSuperuser(false)
+                .dateJoined(LocalDateTime.now())
+                .build();
+        userRepository.save(user);
+        
+        // Assign professeur group to the user
+        Group professeurGroup = groupRepository.findByName("professeur")
+                .orElseGet(() -> {
+                    Group newGroup = Group.builder().name("professeur").build();
+                    return groupRepository.save(newGroup);
+                });
+        
+        UserGroups userGroup = UserGroups.builder()
+                .user(user)
+                .group(professeurGroup)
+                .build();
+        userGroupRepository.save(userGroup);
+        
+        System.out.println("Professeur user created with email: " + email);
+    }
+    
+    public void createCandidatUser(String email, String password, String firstName, String lastName) {
+        if (userRepository.existsByEmail(email)) {
+            System.out.println("Candidat user already exists with email: " + email);
+            return;
+        }
+        
+        User user = User.builder()
+                .username(email)
+                .email(email)
+                .password(passwordEncoder.encode(password))
+                .firstName(firstName)
+                .lastName(lastName)
+                .isActive(true)  // Active by default for testing
+                .isStaff(false)
+                .isSuperuser(false)
+                .dateJoined(LocalDateTime.now())
+                .build();
+        userRepository.save(user);
+        
+        // Assign candidat group to the user
+        Group candidatGroup = groupRepository.findByName("candidat")
+                .orElseGet(() -> {
+                    Group newGroup = Group.builder().name("candidat").build();
+                    return groupRepository.save(newGroup);
+                });
+        
+        UserGroups userGroup = UserGroups.builder()
+                .user(user)
+                .group(candidatGroup)
+                .build();
+        userGroupRepository.save(userGroup);
+        
+        System.out.println("Candidat user created with email: " + email);
     }
 }

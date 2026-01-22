@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ChevronDown, GraduationCap, LogIn, LogOut } from 'lucide-react';
+import { Menu, X, ChevronDown, GraduationCap, LogIn, LogOut, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import logo from '@/assets/logo.png';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -131,8 +132,8 @@ const Header = () => {
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-soft group-hover:shadow-medium transition-shadow">
-              <GraduationCap className="w-7 h-7 text-primary-foreground" />
+            <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-soft group-hover:shadow-medium transition-shadow p-2">
+              <img src={logo} alt="eDoctorat Logo" width={40} height={40} />
             </div>
             <div className="hidden sm:block">
               <h1 className="text-xl font-serif font-bold text-foreground">eDoctorat</h1>
@@ -182,19 +183,21 @@ const Header = () => {
           {/* Actions */}
           <div className="flex items-center gap-3">
             {isLoggedIn ? (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <Link to={getDashboardLink()}>
-                  <Button variant="outline" size="default">
-                    Tableau de bord
+                  <Button variant="default" size="icon" className="shadow-sm rounded-full">
+                    <User className="w-5 h-5" />
                   </Button>
                 </Link>
-                <button 
+                <Button 
                   onClick={handleLogout}
-                  className="p-2 rounded-lg hover:bg-muted transition-colors"
+                  variant="ghost"
+                  size="icon"
+                  className="hover:bg-destructive/10 hover:text-destructive rounded-full"
                   aria-label="Déconnexion"
                 >
                   <LogOut className="w-5 h-5" />
-                </button>
+                </Button>
               </div>
             ) : (
               <>

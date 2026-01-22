@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '@/config/auth';
+import { API_BASE_URL, GOOGLE_OAUTH_ENDPOINT } from '@/config/auth';
 
 // Utility function to check if token is expired
 const isTokenExpired = (token: string): boolean => {
@@ -69,112 +69,6 @@ const getAuthHeaders = async () => {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`
   };
-};
-
-// API Service for Directeur CED
-export const directeurCedApi = {
-  // Get candidates for CED
-  getCedCandidats: async (limit?: number, offset?: number) => {
-    const params = new URLSearchParams();
-    if (limit !== undefined) params.append('limit', limit.toString());
-    if (offset !== undefined) params.append('offset', offset.toString());
-    
-    const queryString = params.toString();
-    const url = `${API_BASE_URL}/api/get-ced-candidats/${queryString ? '?' + queryString : ''}`;
-    
-    const headers = await getAuthHeaders();
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: headers
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    return response.json();
-  },
-
-  // Get subjects for CED
-  getCedSujets: async (limit?: number, offset?: number) => {
-    const params = new URLSearchParams();
-    if (limit !== undefined) params.append('limit', limit.toString());
-    if (offset !== undefined) params.append('offset', offset.toString());
-    
-    const queryString = params.toString();
-    const url = `${API_BASE_URL}/api/get-ced-sujets/${queryString ? '?' + queryString : ''}`;
-    
-    const headers = await getAuthHeaders();
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: headers
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    return response.json();
-  },
-
-  // Get results for CED
-  getCedResultats: async (limit?: number, offset?: number) => {
-    const params = new URLSearchParams();
-    if (limit !== undefined) params.append('limit', limit.toString());
-    if (offset !== undefined) params.append('offset', offset.toString());
-    
-    const queryString = params.toString();
-    const url = `${API_BASE_URL}/api/get-ced-resultats/${queryString ? '?' + queryString : ''}`;
-    
-    const headers = await getAuthHeaders();
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: headers
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    return response.json();
-  },
-
-  // Get all inscriptions
-  getAllInscriptions: async (limit?: number, offset?: number) => {
-    const params = new URLSearchParams();
-    if (limit !== undefined) params.append('limit', limit.toString());
-    if (offset !== undefined) params.append('offset', offset.toString());
-    
-    const queryString = params.toString();
-    const url = `${API_BASE_URL}/api/get-ced-inscriptions/${queryString ? '?' + queryString : ''}`;
-    
-    const headers = await getAuthHeaders();
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: headers
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    return response.json();
-  },
-
-  // Download registration report
-  downloadRegistrationReport: async () => {
-    const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/download-registration-report`, {
-      method: 'GET',
-      headers: headers
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return response.blob();
-  }
 };
 
 // API Service for Authentication
@@ -257,5 +151,33 @@ export const authApi = {
     }
     
     return response.json();
+  },
+  
+  // Google OAuth login
+  googleLogin: async (idToken: string) => {
+    const response = await fetch(`${API_BASE_URL}${GOOGLE_OAUTH_ENDPOINT}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ token: idToken }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Google login failed');
+    }
+    
+    const data = await response.json();
+    
+    // Store tokens in localStorage
+    if (data.access) {
+      localStorage.setItem('accessToken', data.access);
+    }
+    if (data.refresh) {
+      localStorage.setItem('refreshToken', data.refresh);
+    }
+    
+    return data;
   }
 };

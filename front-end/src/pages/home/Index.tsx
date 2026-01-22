@@ -5,7 +5,7 @@ import { ArrowRight, GraduationCap, Users, BookOpen, Award, Calendar, FlaskConic
 import { Button } from '@/components/ui/button';
 import Layout from '@/components/layout/Layout';
 import { jwtDecode } from 'jwt-decode';
-import heroImage from '@/assets/hero-university.jpg';
+import heroImage from '@/assets/hero-university.jpeg';
 
 interface JwtPayload {
   exp: number;
@@ -51,12 +51,12 @@ const features = [
 ];
 
 const roles = [
-  { label: 'Candidat', href: '/login/candidat', description: 'Accédez à votre espace candidat' },
-  { label: 'Professeur', href: '/login/professeur', description: 'Gérez vos doctorants et sujets' },
-  { label: 'Scolarité', href: '/login/scolarite', description: 'Administration des inscriptions' },
-  { label: 'Directeur CED', href: '/login/ced', description: "Direction du centre d'études" },
-  { label: 'Directeur Labo', href: '/login/labo', description: 'Gestion du laboratoire' },
-  { label: 'Directeur Pôle', href: '/login/pole', description: 'Coordination du pôle doctoral' },
+  { label: 'Candidat', href: '/login', description: 'Accédez à votre espace candidat' },
+  { label: 'Professeur', href: '/login', description: 'Gérez vos doctorants et sujets' },
+  { label: 'Scolarité', href: '/login', description: 'Administration des inscriptions' },
+  { label: 'Directeur CED', href: '/login', description: "Direction du centre d'études" },
+  { label: 'Directeur Labo', href: '/login', description: 'Gestion du laboratoire' },
+  { label: 'Directeur Pôle', href: '/login', description: 'Coordination du pôle doctoral' },
 ];
 
 const Index = () => {
