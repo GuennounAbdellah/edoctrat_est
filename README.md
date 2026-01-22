@@ -57,6 +57,63 @@ Note: Les noms exacts des actions et endpoints se trouvent dans les contrôleurs
 
 ## Prerequisites
 - Java 17 or later (Spring Boot 3.x requires Java 17+).
+
+## Architecture du projet
+Le projet suit une architecture classique en couches avec une séparation claire entre frontend, backend et persistance:
+
+- **Frontend (SPA)**: React + TypeScript, construit avec Vite. Gère l'interface utilisateur, l'authentification côté client, l'appel des APIs REST et la gestion d'état minimale.
+- **Backend (API)**: Spring Boot (Java) exposant des endpoints REST. Structure typique: contrôleurs (API), services (logique métier), repositories (accès aux données), DTOs et sécurité (JWT).
+- **Base de données**: PostgreSQL/MySQL (configurable via `application.properties`).
+- **Authentification**: JWT (filtres et service JWT présents dans `back-end/src/main/java/.../security`).
+- **Stockage de fichiers**: pièces jointes et annexes — gérées soit en base, soit via stockage local/objet (configurable).
+- **Services externes**: SMTP pour l'envoi d'e-mails (confirmation, convocations), éventuellement services OAuth pour Google.
+
+Diagramme (simplifié):
+
+	Frontend (Vite React)
+			 |
+			 | HTTPS / REST
+			 v
+	Backend (Spring Boot)
+	 - Controllers -> Services -> Repositories
+	 - JWT Auth
+			 |
+			 v
+	Base de données (Postgres/MySQL)
+			 |
+			 v
+	Stockage (local / S3)  --  SMTP / OAuth providers
+
+Chaque composant est isolé pour faciliter le déploiement (containers, services PaaS) et les tests.
+
+## Relations entre acteurs et flux par fonctionnalité
+Pour faciliter la compréhension, ci-dessous les acteurs principaux et leurs interactions associées à chaque fonctionnalité. Les noms d'acteurs correspondent aux rôles implémentés dans le code (ex: `Candidat`, `Professeur`, `DirecteurLabo`, `DirecteurCED`, `DirecteurPole`, `Scolarite`, `Examinateur`).
+
+- **Inscription / Pré-inscription**
+	- Acteurs: `Candidat`, `Scolarite`, `DirecteurCED`.
+	- Flux: le `Candidat` soumet son dossier -> le backend stocke et notifie `Scolarite` -> `Scolarite` / `DirecteurCED` vérifient et valident (ou rejettent) -> notification renvoyée au `Candidat`.
+
+- **Dépôt / Proposition de sujet**
+	- Acteurs: `Professeur`, `Candidat`, `DirecteurLabo`.
+	- Flux: `Professeur` propose un sujet -> visible par `Candidat` -> `Candidat` postule au sujet ou le propose via workflow -> `DirecteurLabo` peut approuver/associer.
+
+- **Création et gestion des commissions**
+	- Acteurs: `DirecteurLabo`, `DirecteurCED`, `Examinateur`, `Scolarite`.
+	- Flux: `DirecteurLabo` crée commission (composition, date) -> invitations/convocations envoyées aux `Examinateurs` et `Scolarite` -> `Examinateurs` confirment -> commission tenue -> décision remontée au backend.
+
+- **Evaluation / Participation (Examinateur)**
+	- Acteurs: `Examinateur`, `Professeur`, `Candidat`.
+	- Flux: `Examinateur` accède aux dossiers via API -> renseigne avis/notes -> résultat enregistré -> visible par `Professeur` et `Candidat` suivant droits.
+
+- **Validation administrative finale (Scolarité)**
+	- Acteurs: `Scolarite`, `DirecteurPole`, `DirecteurCED`, `Candidat`.
+	- Flux: Après décision de la commission, `Scolarite` effectue les formalités administratives et clôture l'inscription; `DirecteurPole` peut valider certains cas si nécessaire.
+
+- **Notifications & Calendrier**
+	- Acteurs: Tous.
+	- Flux: Backend envoie notifications (email/in-app) pour convocations, décisions, échéances — tous les acteurs reçoivent les notifications pertinentes selon leurs rôles.
+
+Remarque: les interactions exactes (endpoints et payloads) sont définies dans les contrôleurs backend (`back-end/src/main/java/.../controller`) et consommées par les pages frontend (`front-end/src/pages`). Si vous voulez, je peux générer une carte complète des endpoints et lier chaque endpoint aux rôles concernés.
 - Maven (or use the included `mvnw` / `mvnw.cmd`).
 - Node.js (v18+ recommended) and npm (or `bun`/`pnpm` if you prefer).
 
