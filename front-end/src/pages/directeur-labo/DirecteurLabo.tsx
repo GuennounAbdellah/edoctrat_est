@@ -157,7 +157,7 @@ const DirecteurLaboInterface: React.FC = () => {
     fetchDirectorInfo();
     fetchAllData();
     fetchProfesseurs(); // Fetch professors for dropdowns
-  }, []);
+  }, [] );
 
   const fetchAllData = async () => {
     setLoading(true);
