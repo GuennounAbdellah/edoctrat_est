@@ -1,10 +1,17 @@
 package com.tppartdeux.edoctorat.controller.professeur;
 
 import com.tppartdeux.edoctorat.dto.ResultDTO;
+import com.tppartdeux.edoctorat.dto.auth.UserInfoResponse;
 import com.tppartdeux.edoctorat.dto.professeur.*;
 
+import com.tppartdeux.edoctorat.model.auth.User;
 import com.tppartdeux.edoctorat.model.professeur.*;
+import com.tppartdeux.edoctorat.repository.auth.UserRepository;
+import com.tppartdeux.edoctorat.repository.professeur.CommissionProfesseurRepository;
+import com.tppartdeux.edoctorat.repository.professeur.ProfesseurRepository;
 import com.tppartdeux.edoctorat.service.DtoMapperService;
+import com.tppartdeux.edoctorat.security.JwtTokenService;
+import com.tppartdeux.edoctorat.service.auth.UserService;
 import com.tppartdeux.edoctorat.service.candidat.PostulerService;
 import com.tppartdeux.edoctorat.service.professeur.*;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +43,41 @@ public class DirecteurLaboController {
     private final DtoMapperService dtoMapper;
     private final PostulerService postulerService;
     private final FormationDoctoraleService formationDoctoraleService;
+    private final CommissionProfesseurRepository commissionProfesseurRepository;
+    private final JwtTokenService jwtTokenService;
+    private final UserService userService;
+
+    // GET /api/directeur-labo-info/ - Get current directeur labo information including laboratory
+    @GetMapping("/directeur-labo-info/")
+    public ResponseEntity<?> getDirecteurLaboInfo(@RequestHeader("Authorization") String authHeader) {
+        try {
+            String token = authHeader.replace("Bearer ", "");
+            String username = jwtTokenService.getUsernameFromToken(token);
+            User user = userService.findByUsername(username).orElse(null);
+            if (user == null) {
+                return ResponseEntity.status(401).body(Map.of(
+                    "error", "Unauthorized",
+                    "message", "Invalid authentication token"
+                ));
+            }
+
+            Professeur professeur = professeurService.findByUser(user).orElse(null);
+            if (professeur == null) {
+                return ResponseEntity.status(404).body(Map.of(
+                    "error", "Not Found",
+                    "message", "Professeur profile not found for this user"
+                ));
+            }
+
+            DirecteurLaboResponse response = dtoMapper.toDirecteurLaboResponse(professeur);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "Internal Server Error",
+                "message", "Error retrieving directeur labo information: " + e.getMessage()
+            ));
+        }
+    }
 
     @GetMapping("/labo-candidats-joined/")
     public ResponseEntity<List<PostulerJoinedResponse>> getCandidatsJoined(
@@ -167,6 +209,115 @@ public class DirecteurLaboController {
                     HttpStatus.CREATED);
         } catch (Exception e) {
             return ResponseEntity.status(400).build();
+        }
+    }
+
+    // POST /api/commission-with-details/ - Create commission with full details
+    @PostMapping("/commission-with-details/")
+    public ResponseEntity<?> createCommissionWithDetails(@RequestBody Map<String, Object> body) {
+        try {
+            // Validate required fields
+            if (!body.containsKey("dateCommission") || !body.containsKey("heure") || 
+                !body.containsKey("lieu") || !body.containsKey("labo")) {
+                return ResponseEntity.status(400).body(Map.of(
+                    "error", "Missing required fields",
+                    "message", "dateCommission, heure, lieu, and labo are required"
+                ));
+            }
+
+            // Create the commission first
+            Commission commission = new Commission();
+            commission.setDateCommission(LocalDate.parse(body.get("dateCommission").toString()));
+            commission.setHeure(LocalTime.parse(body.get("heure").toString()));
+            commission.setLieu((String) body.get("lieu"));
+            
+            // Validate and set laboratory
+            Long laboId = Long.valueOf(body.get("labo").toString());
+            Laboratoire labo = laboratoireService.findById(laboId).orElse(null);
+            if (labo == null) {
+                return ResponseEntity.status(400).body(Map.of(
+                    "error", "Invalid laboratory ID",
+                    "message", "Laboratoire avec l'ID " + laboId + " n'existe pas. Veuillez vérifier votre configuration."
+                ));
+            }
+            commission.setLabo(labo);
+
+            Commission createdCommission = commissionService.create(commission);
+
+            // Add participants (professors) to the commission
+            if (body.containsKey("participantIds")) {
+                @SuppressWarnings("unchecked")
+                List<Integer> participantIds = (List<Integer>) body.get("participantIds");
+                for (Integer profId : participantIds) {
+                    professeurService.findById(profId.longValue()).ifPresent(prof -> {
+                        CommissionProfesseurs cp = CommissionProfesseurs.builder()
+                                .commission(createdCommission)
+                                .professeur(prof)
+                                .build();
+                        commissionProfesseurRepository.save(cp);
+                    });
+                }
+            }
+
+            // Create examiners for selected candidates and subjects
+            if (body.containsKey("sujetIds") && body.containsKey("candidatCnes")) {
+                @SuppressWarnings("unchecked")
+                List<Integer> sujetIds = (List<Integer>) body.get("sujetIds");
+                @SuppressWarnings("unchecked")
+                List<String> candidatCnes = (List<String>) body.get("candidatCnes");
+
+                for (String cne : candidatCnes) {
+                    // Find the candidate's postuler record to get the associated sujet
+                    postulerService.findByCandidatCne(cne).ifPresent(postuler -> {
+                        if (sujetIds.contains(postuler.getSujet().getId().intValue())) {
+                            // Create examiner entry for this candidate
+                            Examiner examiner = Examiner.builder()
+                                    .commission(createdCommission)
+                                    .sujet(postuler.getSujet())
+                                    .candidat(postuler.getCandidat())
+                                    .noteDossier(0.0f)
+                                    .noteEntretien(0)
+                                    .decision("")
+                                    .publier(false)
+                                    .valider(false)
+                                    .build();
+                            examinerService.create(examiner);
+                        }
+                    });
+                }
+            }
+
+            // Get participants and sujets for response
+            List<Professeur> participants = commissionProfesseurRepository.findByCommission(createdCommission)
+                    .stream()
+                    .map(CommissionProfesseurs::getProfesseur)
+                    .collect(Collectors.toList());
+
+            List<Sujet> sujets = examinerService.findByCommission(createdCommission)
+                    .stream()
+                    .map(Examiner::getSujet)
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            return new ResponseEntity<>(
+                    dtoMapper.toCommissionResponse(createdCommission, participants, sujets),
+                    HttpStatus.CREATED);
+        } catch (java.time.format.DateTimeParseException e) {
+            return ResponseEntity.status(400).body(Map.of(
+                "error", "Invalid date or time format",
+                "message", "Format de date ou d'heure invalide. Utilisez le format correct (YYYY-MM-DD pour la date, HH:mm pour l'heure)"
+            ));
+        } catch (NumberFormatException e) {
+            return ResponseEntity.status(400).body(Map.of(
+                "error", "Invalid number format",
+                "message", "L'ID du laboratoire doit être un nombre valide"
+            ));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(400).body(Map.of(
+                "error", "Commission creation failed",
+                "message", "Erreur lors de la création de la commission: " + e.getMessage()
+            ));
         }
     }
 

@@ -88,11 +88,7 @@ const CommissionsTab: React.FC<CommissionsTabProps> = ({
             transition={{ duration: 0.3 }}
             className="space-y-6"
         >
-            <div className="flex justify-end">
-                <Button onClick={onCreateCommission} className="flex items-center gap-2">
-                    Créer une commission
-                </Button>
-            </div>
+
 
             {loading ? (
                 <div className="flex justify-center py-8">

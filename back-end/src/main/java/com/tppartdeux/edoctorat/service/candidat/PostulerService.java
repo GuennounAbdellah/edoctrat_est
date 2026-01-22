@@ -99,6 +99,10 @@ public class PostulerService {
         return postulerRepository.findByCandidatAndSujet(candidat, sujet);
     }
 
+    public Optional<Postuler> findByCandidatCne(String cne) {
+        return postulerRepository.findByCandidat_Cne(cne);
+    }
+
     // Update
     public Postuler update(Long id, Postuler postulerDetails) {
         Postuler postuler = postulerRepository.findById(id)

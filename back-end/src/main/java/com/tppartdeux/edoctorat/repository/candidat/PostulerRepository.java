@@ -14,4 +14,5 @@ public interface PostulerRepository extends JpaRepository<Postuler, Long> {
     List<Postuler> findByCandidat(Candidat candidat);
     List<Postuler> findBySujet(Sujet sujet);
     Optional<Postuler> findByCandidatAndSujet(Candidat candidat, Sujet sujet);
+    Optional<Postuler> findByCandidat_Cne(String cne);
 }

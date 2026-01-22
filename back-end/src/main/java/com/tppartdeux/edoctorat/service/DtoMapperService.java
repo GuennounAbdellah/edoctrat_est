@@ -224,4 +224,30 @@ public class DtoMapperService {
                     .build())
                 .build();
     }
+
+    public DirecteurLaboResponse toDirecteurLaboResponse(Professeur professeur) {
+        if (professeur == null) return null;
+        
+        DirecteurLaboResponse.DirecteurLaboResponseBuilder builder = DirecteurLaboResponse.builder()
+                .id(professeur.getId());
+        
+        // Get user information
+        if (professeur.getUser() != null) {
+            builder.nom(professeur.getUser().getLastName())
+                   .prenom(professeur.getUser().getFirstName())
+                   .email(professeur.getUser().getEmail());
+        }
+        
+        // Get laboratory information
+        if (professeur.getLabo() != null) {
+            builder.laboratoireId(professeur.getLabo().getId())
+                   .laboratoireNom(professeur.getLabo().getNomLaboratoire())
+                   .laboratoireDescription(professeur.getLabo().getDescription());
+        }
+        
+        // Department information (can be derived from laboratory or set default)
+        builder.departement(professeur.getLabo() != null ? professeur.getLabo().getNomLaboratoire() : "Informatique");
+        
+        return builder.build();
+    }
 }
